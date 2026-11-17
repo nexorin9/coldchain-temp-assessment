@@ -1,0 +1,115 @@
+# ③ 主管确认 → 冷链台账写入 → 接种门诊通知（两侧收到的真实报文）
+# 采集时间：2026-10-26 15:49:00 +0800
+
+$ curl -sS -X POST -H 'Authorization: Bearer <主管凭据>' -H 'Content-Type: application/json' -d '{"actor":"supervisor-007","disposition":"isolate","opinion":"已联系疫苗生产企业评估质量影响，先隔离在库批次"}' http://127.0.0.1:18100/v1/runs/run_e98c6e6acdf356edeb4659f7d59ca30b/confirm
+{
+    "run_id": "run_e98c6e6acdf356edeb4659f7d59ca30b",
+    "previous_state": "awaiting_confirmation",
+    "state": "confirmed",
+    "confirmed_by": "supervisor-007",
+    "confirmed_at": "2026-10-26T15:49:00+08:00",
+    "disposition": "isolate",
+    "disposition_label": "隔离",
+    "opinion": "已联系疫苗生产企业评估质量影响，先隔离在库批次",
+    "external_ref": "cc-point-vax-freezer-01-20261019T191000Z",
+    "idempotency_key": "54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae",
+    "writeback_state": "pending",
+    "payload_frozen": true,
+    "writeback": {
+        "external_ref": "cc-point-vax-freezer-01-20261019T191000Z",
+        "idempotency_key": "54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae",
+        "ledger_written": true,
+        "ledger_skipped": false,
+        "notification_sent": true,
+        "notification_skipped": false,
+        "writeback_state": "written_back",
+        "note": "冷链台账越温记录已写入，接种门诊通知已发出"
+    },
+    "note": "冷链台账越温记录已写入，接种门诊通知已发出"
+}
+
+$ curl -sS http://127.0.0.1:18151/__counts   # 冷链台账与通知系统两端真实收到的报文
+（这是冷链台账与通知系统两端真实收到的报文，按原样列出）
+
+出站调用计数：
+  ledger_series: 0
+  ledger_batches: 1
+  ledger_deviations: 1
+  notify_messages: 1
+  model_calls: 1
+
+→ 模型端点 POST /chat/completions（schema=attribution, model=coldchain-attribution-stub）
+→ 冷链台账 GET /api/v1/batches?at=2026-10-20T03%3A10%3A00%2B08%3A00&point_id=point-vax-freezer-01（读在库批次清单）
+→ 冷链台账 POST /api/v1/cold-chain/deviations 收到的越温记录：
+{
+  "external_ref": "cc-point-vax-freezer-01-20261019T191000Z",
+  "idempotency_key": "54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae",
+  "point_id": "point-vax-freezer-01",
+  "device_name": "疫苗冷藏库温度记录仪",
+  "excursion_started_at": "2026-10-20T03:10:00+08:00",
+  "excursion_ended_at": "2026-10-20T03:25:00+08:00",
+  "peak_temperature_c": 12.4,
+  "duration_minutes": 15,
+  "zone": "2~8℃",
+  "batches": [
+    {
+      "point_id": "point-vax-freezer-01",
+      "batch_ref": "<EXAMPLE_LOT-01>",
+      "product_name": "疫苗（脱敏样例）",
+      "quantity": 120,
+      "expiry_date": "<EXAMPLE_EXPIRY-A>"
+    },
+    {
+      "point_id": "point-vax-freezer-01",
+      "batch_ref": "<EXAMPLE_LOT-02>",
+      "product_name": "疫苗（脱敏样例）",
+      "quantity": 60,
+      "expiry_date": "<EXAMPLE_EXPIRY-B>"
+    },
+    {
+      "point_id": "point-vax-freezer-01",
+      "batch_ref": "<EXAMPLE_LOT-03>",
+      "product_name": "疫苗（脱敏样例）",
+      "quantity": 48,
+      "expiry_date": "<EXAMPLE_EXPIRY-C>"
+    },
+    {
+      "point_id": "point-vax-freezer-01",
+      "batch_ref": "<EXAMPLE_LOT-04>",
+      "product_name": "疫苗（脱敏样例）",
+      "quantity": 96,
+      "expiry_date": "<EXAMPLE_EXPIRY-D>"
+    }
+  ],
+  "cause_conclusion": "door_open",
+  "evidence": [
+    {
+      "feature": "device_event:door_open",
+      "value": 2,
+      "threshold": 1,
+      "note": "窗口内上报 开门 事件的采样条数"
+    },
+    {
+      "feature": "peak_temperature_c",
+      "value": 12.4,
+      "threshold": 8,
+      "note": "窗口内峰值温度"
+    }
+  ],
+  "disposition": "isolate",
+  "confirmed_by": "supervisor-007",
+  "confirmed_at": "2026-10-26T15:49:00.634034+08:00",
+  "exception_record": "（记录表正文共 70 行，正文见 shot 04 的 coldchain draft 输出）\\n疫苗储存和运输温度异常情况记录表（草稿）\\n==============================================\\n…"
+}
+
+→ 通知系统 POST /api/v1/messages 收到的门诊通知：
+{
+  "channel": "coldchain_deviation",
+  "audience": "vaccination_clinic",
+  "title": "冷链温控越温通知",
+  "body": "（记录表正文共 74 行，正文见 shot 04 的 coldchain draft 输出）\\n点位 point-vax-freezer-01（疫苗冷藏库温度记录仪） 于 2026-10-20 03:10（+08:00） ~ 2026-10-20 03:25（+08:00） 越温，峰值 12.40 ℃，持续 15 分钟（温区 2~8℃）。\\n最终处置结论：隔离（isolate）。确认人：supervisor-007，确认时间：2026-10-26 15:49（+08:00）。\\n…",
+  "related_run_id": "run_e98c6e6acdf356edeb4659f7d59ca30b",
+  "idempotency_key": "210b74c3e9f308f4bef9cdede7acc46007c4fc55a3c2d0ba1b12fb46ea242590"
+}
+
+

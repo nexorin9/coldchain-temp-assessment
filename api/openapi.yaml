@@ -1,0 +1,2433 @@
+openapi: 3.1.0
+
+info:
+  title: 药品与疫苗冷链温控判定服务
+  version: 0.1.0
+  description: |
+    疫苗冷库与药学部冷藏药品冰箱的温湿度记录仪按 5 分钟粒度把温度事件推进来，
+    本服务按点位温区抽出越温窗口、给出归因与《疫苗储存和运输温度异常情况记录表》草稿，
+    交药学部主管确认后再写回冷链台账并通知接种门诊。
+
+    三条使用约定：
+
+      1. **批次能不能用不归本服务决定。** 处置结论只到「待确认」为止；
+         批次可用性由疫苗生产企业评估质量影响、再由药学部主管确认决定。
+      2. **配置缺失即不判。** 点位温区配置缺了或不可信，系统转人工并说明原因，
+         不猜温区、不用默认值顶替。
+      3. **未确认不得写回。** 模型产出只到草稿；只有主管身份的确认动作推进状态并触发出站写回。
+
+    本文档是接口契约：每个端点都带请求 / 响应样例，
+    样例缺失或只是占位符（TODO、待补、（填写））的端点一律判契约失败。
+    文档由 scripts/check_openapi.sh 与 internal/contract 的契约测试守着，
+    代码里加了端点却没进本文档（或反之），都会在验收时暴露出来。
+  license:
+    name: MIT
+
+servers:
+  - url: /
+    description: 与本服务同源（院内内网小主机上的监听地址，由 serve --addr 指定）
+
+tags:
+  - name: 健康与版本
+    description: 免鉴权，只回服务自身状态，不碰业务数据
+  - name: 温度接入
+    description: 记录仪 / 院内边缘网关投递温度事件与批量导入记录仪导出
+  - name: 判定台账
+    description: 查判定结论、越温窗口、步骤时间线与审计链
+  - name: 温区配置
+    description: 点位温区配置的登记与维护（判定口径的唯一来源）
+  - name: 人工确认
+    description: 主管确认与否决处置结论，触发出站写回
+  - name: 写回补偿
+    description: 出站写回没落成时的待补偿清单与补偿重放
+  - name: 运行摘要
+    description: 服务自己在跑的这 24 小时里发生了什么（只读看板）
+
+paths:
+  /healthz:
+    get:
+      tags: [健康与版本]
+      summary: 服务存活状态
+      description: 免鉴权。只回服务名、状态与版本，不回任何凭据或内网地址。
+      operationId: getHealthz
+      security: []
+      responses:
+        "200":
+          description: 服务存活
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              examples:
+                default:
+                  summary: 服务存活
+                  value:
+                    status: ok
+                    service: coldchain-temp-assessment
+                    version: 0.1.0
+
+  /v1/version:
+    get:
+      tags: [健康与版本]
+      summary: 服务名称与版本
+      description: 免鉴权。给院内小主机上的部署脚本与巡检脚本核对版本用。
+      operationId: getVersion
+      security: []
+      responses:
+        "200":
+          description: 版本信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionResponse"
+              examples:
+                default:
+                  summary: 版本信息
+                  value:
+                    name: coldchain-temp-assessment
+                    version: 0.1.0
+
+  /v1/events/coldchain-temperature:
+    post:
+      tags: [温度接入]
+      summary: 投递一条温度事件
+      description: |
+        记录仪或院内边缘网关在越温发生的那一刻推一条温度事件进来。
+
+        幂等：同一点位的同一次采样重复投递只入库一行，
+        第二次起返回 duplicate=true 且 event_id 与首次相同——记录仪重发、网关重试、
+        院内网络抖动都不会在时序里留下重复点。
+      operationId: ingestTemperatureEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemperatureEventInput"
+            examples:
+              doorOpenExcursion:
+                summary: 开门导致的越温读数
+                value:
+                  point_id: point-vax-freezer-01
+                  device_id: device-recorder-0001
+                  device_name: 疫苗冷藏库温度记录仪
+                  measured_at: "2026-10-20T03:15:00+08:00"
+                  temperature_c: 11.4
+                  unit: C
+                  humidity_pct: 62.5
+                  battery_pct: 91
+                  accuracy_c: 0.3
+                  source: recorder
+                  alarm_flag: true
+                  events: [door_open]
+      responses:
+        "202":
+          description: 事件已入库
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventAccepted"
+              examples:
+                accepted:
+                  summary: 首次投递
+                  value:
+                    event_id: evt_87b2e6ed0a27607907a3b7215aca92b0
+                    duplicate: false
+                    point_id: point-vax-freezer-01
+                    measured_at: "2026-10-20T03:15:00+08:00"
+                    accepted_at: "2026-10-20T03:15:01+08:00"
+                    run_state: pending
+                    note: 事件已入库；判定 run 由调度器按点位与窗口建立，同一越温窗口只判一次
+                    precision:
+                      limited: false
+                      limit_c: 0.5
+                duplicate:
+                  summary: 同一采样重复投递
+                  value:
+                    event_id: evt_87b2e6ed0a27607907a3b7215aca92b0
+                    duplicate: true
+                    point_id: point-vax-freezer-01
+                    measured_at: "2026-10-20T03:15:00+08:00"
+                    accepted_at: "2026-10-20T03:18:42+08:00"
+                    run_state: pending
+                    note: 该采样此前已入库，返回既有事件 ID，未重复落库
+                    precision:
+                      limited: false
+                      limit_c: 0.5
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+        "422":
+          $ref: "#/components/responses/RangeError"
+        "429":
+          $ref: "#/components/responses/RateLimitedError"
+
+  /v1/imports/temperature-series:
+    post:
+      tags: [温度接入]
+      summary: 批量导入记录仪导出的温度序列
+      description: |
+        现场记录仪导出的 CSV 是真实入场材料。这个端点按表头驱动读取（不写死列序），
+        每批单事务提交，返回导入行数、跳过行数与逐条跳过原因——脏行不静默丢弃。
+
+        dry_run=true 时只校验不落库：跳过统计与实跑一致（除落库外无行为差异），
+        拿它先跑一遍最省事。
+      operationId: importTemperatureSeries
+      parameters:
+        - name: dry_run
+          in: query
+          required: false
+          description: 只校验不落库。取值只认 true / false。
+          schema:
+            type: boolean
+            default: false
+      requestBody:
+        required: true
+        content:
+          text/csv:
+            schema:
+              type: string
+            examples:
+              recorderExport:
+                summary: 记录仪导出片段
+                value: |
+                  point_id,device_id,device_name,measured_at,temperature_c,unit,humidity_pct,battery_pct,accuracy_c,source,alarm_flag,events
+                  point-vax-freezer-01,device-recorder-0001,疫苗冷藏库温度记录仪,2026-10-20T03:10:00+08:00,9.6,C,61.0,90,0.3,recorder,false,
+                  point-vax-freezer-01,device-recorder-0001,疫苗冷藏库温度记录仪,2026-10-20T03:15:00+08:00,11.4,C,62.5,90,0.3,recorder,true,door_open
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: 导入完成（或干跑完成）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+              examples:
+                imported:
+                  summary: 干净文件整批入库
+                  value:
+                    imported: 84
+                    skipped: 0
+                    total_rows: 84
+                    duplicates: 0
+                    dry_run: false
+                    skip_reasons: []
+                    encoding: utf-8
+                    encoding_fallback: false
+                    original_bytes: 12038
+                    extra_values: 0
+                    note: 导入完成：合法行已单事务入库；跳过的行见 skip_reasons
+                dirtyRows:
+                  summary: 含脏行时逐条给出跳过原因
+                  value:
+                    imported: 81
+                    skipped: 3
+                    total_rows: 84
+                    duplicates: 0
+                    dry_run: false
+                    skip_reasons:
+                      - row: 3
+                        code: unparsable_measured_at
+                        reason: 测量时间不是带时区偏移的 RFC3339 时刻
+                        point_id: point-vax-freezer-01
+                      - row: 4
+                        code: temperature_out_of_range
+                        reason: 温度 150.00℃ 超出量程 [-80, 120]
+                        point_id: point-vax-freezer-01
+                      - row: 5
+                        code: unknown_event_kind
+                        reason: 未知设备事件类型：compressor_alarm
+                        point_id: point-vax-freezer-01
+                    encoding: utf-8
+                    encoding_fallback: false
+                    original_bytes: 12038
+                    extra_values: 0
+                    note: 导入完成：合法行已单事务入库；跳过的行见 skip_reasons
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+
+  /v1/runs:
+    get:
+      tags: [判定台账]
+      summary: 判定台账清单
+      description: |
+        查「一段时间内判过哪些越温」。三个查询参数都是可选的：
+        point_id 限点位，from / to 限窗口起点区间（闭区间）。
+
+        from / to 只接受 RFC3339 带偏移的时刻：日期被悄悄解释成某个时区的零点，
+        得到的清单就会少算或多算一整段越温，而清单看起来「正常」，没人会去核。
+      operationId: listRuns
+      parameters:
+        - name: point_id
+          in: query
+          required: false
+          description: 限点位；不传表示不限点位。
+          schema:
+            type: string
+          example: point-vax-freezer-01
+        - name: from
+          in: query
+          required: false
+          description: 区间起点（RFC3339，带时区偏移）。按窗口起点取。
+          schema:
+            type: string
+            format: date-time
+          example: "2026-10-19T00:00:00+08:00"
+        - name: to
+          in: query
+          required: false
+          description: 区间终点（RFC3339，带时区偏移）。按窗口起点取。
+          schema:
+            type: string
+            format: date-time
+          example: "2026-10-26T00:00:00+08:00"
+      responses:
+        "200":
+          description: 判定清单
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunListResponse"
+              examples:
+                withRuns:
+                  summary: 查到两条判定
+                  value:
+                    count: 2
+                    point_id: point-vax-freezer-01
+                    from: "2026-10-19T00:00:00+08:00"
+                    to: "2026-10-26T00:00:00+08:00"
+                    runs:
+                      - run_id: run_3f9c1a7d5b2e4c08
+                        point_id: point-vax-freezer-01
+                        state: awaiting_confirmation
+                        exec_state: succeeded
+                        window_start: "2026-10-20T03:10:00+08:00"
+                        window_end: "2026-10-20T03:25:00+08:00"
+                        external_ref: cc-point-vax-freezer-01-20261019T191000Z
+                        idempotency_key: 54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae
+                        writeback_state: pending
+                        created_at: "2026-10-20T03:26:10+08:00"
+                        updated_at: "2026-10-20T03:26:12+08:00"
+                        zone: 2~8℃
+                        profile_present: true
+                        degraded: false
+                      - run_id: run_9a4d2e7c8b1f3d55
+                        point_id: point-vax-freezer-01
+                        state: confirmed
+                        exec_state: succeeded
+                        window_start: "2026-10-21T22:05:00+08:00"
+                        window_end: "2026-10-21T22:50:00+08:00"
+                        external_ref: cc-point-vax-freezer-01-20261021T140500Z
+                        idempotency_key: 9f1c6b0d5e7a4c2388d0b1f6e3a2c5d7b8e40a19c2d3f6b5e8a1c4d7f0b3e6a9
+                        writeback_state: written_back
+                        written_back_at: "2026-10-22T09:12:03+08:00"
+                        created_at: "2026-10-21T22:51:02+08:00"
+                        updated_at: "2026-10-22T09:12:03+08:00"
+                        zone: 2~8℃
+                        profile_present: true
+                        degraded: false
+                empty:
+                  summary: 区间内没有判定
+                  value:
+                    count: 0
+                    point_id: point-vax-freezer-01
+                    from: "2026-10-19T00:00:00+08:00"
+                    to: "2026-10-26T00:00:00+08:00"
+                    runs: []
+                    note: 清单按窗口起点升序；窗口起点落在查询区间内的判定才会列出（未设窗口的采样不计入）
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+
+  /v1/runs/{id}:
+    get:
+      tags: [判定台账]
+      summary: 一条判定的总体状态、窗口摘要与步骤产物
+      description: |
+        回答「那次越温判了没有、判到哪一步、谁确认的」。
+
+        回四段：run（判定总体状态）、window（越温窗口摘要）、
+        steps（步骤时间线）、products（按分码取回的结论产物）。
+        找不到就说找不到：run 不存在回 404 与 E_NOT_FOUND，不回空壳。
+      operationId: getRun
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      responses:
+        "200":
+          description: 判定详情
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunDetailResponse"
+              examples:
+                awaitingConfirmation:
+                  summary: 停在待确认的判定
+                  value:
+                    run:
+                      run_id: run_3f9c1a7d5b2e4c08
+                      point_id: point-vax-freezer-01
+                      state: awaiting_confirmation
+                      exec_state: succeeded
+                      window_start: "2026-10-20T03:10:00+08:00"
+                      window_end: "2026-10-20T03:25:00+08:00"
+                      external_ref: cc-point-vax-freezer-01-20261019T191000Z
+                      idempotency_key: 54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae
+                      writeback_state: pending
+                      created_at: "2026-10-20T03:26:10+08:00"
+                      updated_at: "2026-10-20T03:26:12+08:00"
+                      zone: 2~8℃
+                      profile_present: true
+                      degraded: false
+                    window:
+                      window_start: "2026-10-20T03:10:00+08:00"
+                      window_end: "2026-10-20T03:25:00+08:00"
+                      peak_temperature_c: 12.4
+                      duration_minutes: 15
+                      sample_count: 4
+                      zone: 2~8℃
+                      zone_source: point_profile
+                      peak_at: "2026-10-20T03:20:00+08:00"
+                    steps:
+                      - seq: 1
+                        step_name: fetch_series
+                        state: succeeded
+                        attempt: 1
+                        started_at: "2026-10-20T03:26:10+08:00"
+                        duration_ms: 12
+                        duration_us: 12480
+                        offset_ms: 0
+                        offset_us: 140
+                        end_offset_ms: 12
+                        end_offset_us: 12620
+                        start_pct: 0
+                        width_pct: 20
+                      - seq: 2
+                        step_name: extract_window
+                        state: succeeded
+                        attempt: 1
+                        started_at: "2026-10-20T03:26:10+08:00"
+                        duration_ms: 3
+                        duration_us: 3180
+                        offset_ms: 12
+                        offset_us: 12800
+                        end_offset_ms: 15
+                        end_offset_us: 15980
+                        start_pct: 20
+                        width_pct: 20
+                    step_count: 5
+                    current_step:
+                      seq: 5
+                      step_name: await_confirmation
+                      state: succeeded
+                      attempt: 1
+                      started_at: "2026-10-20T03:26:12+08:00"
+                      duration_ms: 1
+                    recent_errors: []
+                    products:
+                      window:
+                        window:
+                          start: "2026-10-20T03:10:00+08:00"
+                          end: "2026-10-20T03:25:00+08:00"
+                          peak_c: 12.4
+                          duration_minutes: 15
+                          sample_count: 4
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /v1/runs/{id}/timeline:
+    get:
+      tags: [判定台账]
+      summary: 一次判定的运行时间线
+      description: |
+        回答「哪一步慢、哪一步失败重试过几次、现在停在哪」。
+        每步的起止、耗时、状态、尝试序号与退避时长都在里面，
+        位置坐标按链上次序单调推进，两步不会重叠。
+
+        时间线不带产物正文：正文按分码在 run 详情端点取，两处各回一半。
+      operationId: getRunTimeline
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      responses:
+        "200":
+          description: 步骤时间线
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunTimelineResponse"
+              examples:
+                withRetry:
+                  summary: 中间有一步重试过
+                  value:
+                    run_id: run_3f9c1a7d5b2e4c08
+                    run_started_at: "2026-10-20T03:26:10+08:00"
+                    run_ended_at: "2026-10-20T03:26:12+08:00"
+                    total_duration_ms: 2044
+                    step_count: 5
+                    current_step:
+                      seq: 5
+                      step_name: await_confirmation
+                      state: succeeded
+                      attempt: 1
+                      started_at: "2026-10-20T03:26:12+08:00"
+                      duration_ms: 1
+                    entries:
+                      - seq: 1
+                        step_name: fetch_series
+                        state: succeeded
+                        attempt: 1
+                        started_at: "2026-10-20T03:26:10+08:00"
+                        ended_at: "2026-10-20T03:26:10+08:00"
+                        duration_ms: 12
+                        duration_us: 12480
+                        offset_ms: 0
+                        offset_us: 140
+                        end_offset_ms: 12
+                        end_offset_us: 12620
+                        start_pct: 0
+                        width_pct: 1
+                      - seq: 3
+                        step_name: attribute
+                        state: succeeded
+                        attempt: 2
+                        started_at: "2026-10-20T03:26:11+08:00"
+                        ended_at: "2026-10-20T03:26:11+08:00"
+                        duration_ms: 1530
+                        duration_us: 1530440
+                        offset_ms: 15
+                        offset_us: 15980
+                        end_offset_ms: 1545
+                        end_offset_us: 1546420
+                        start_pct: 75
+                        width_pct: 24
+                    recent_errors:
+                      - step_name: attribute
+                        seq: 3
+                        attempt: 1
+                        error_code: E_MODEL_UNAVAILABLE
+                        message: 模型端点不可达，已退回规则基线归因
+                        at: "2026-10-20T03:26:11+08:00"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /v1/runs/{id}/audit:
+    get:
+      tags: [判定台账]
+      summary: 一条判定的审计链
+      description: |
+        回答「这条判定当时用了模型吗、花了多少、谁确认的」。
+
+        审计链记录模型调用的元数据（模型名、耗时、token、估算成本）与人工确认动作。
+        登记的凭据原文在写入前就被抹掉：审计记录里不留 api_key、鉴权头与提示词原文。
+      operationId: getRunAudit
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      responses:
+        "200":
+          description: 审计链
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditSummaryResponse"
+              examples:
+                withModelCall:
+                  summary: 含一次模型调用与一次人工确认
+                  value:
+                    run_id: run_3f9c1a7d5b2e4c08
+                    entry_count: 2
+                    model_call_count: 1
+                    confirmation_count: 1
+                    total_prompt_tokens: 1840
+                    total_completion_tokens: 260
+                    total_tokens: 2100
+                    cost_status: unknown
+                    unknown_cost_count: 1
+                    entries:
+                      - seq: 1
+                        entry_type: model_call
+                        step_name: attribute
+                        schema_name: attribution_v1
+                        model: qwen2.5-14b-instruct
+                        outcome: degraded
+                        degraded: true
+                        error_code: E_MODEL_UNAVAILABLE
+                        latency_ms: 1530
+                        prompt_tokens: 1840
+                        completion_tokens: 260
+                        total_tokens: 2100
+                        cost_status: unknown
+                        prompt_chars: 5120
+                        created_at: "2026-10-20T03:26:11+08:00"
+                      - seq: 2
+                        entry_type: confirmation
+                        actor: 药学部主管张
+                        action: confirm
+                        disposition: isolate
+                        opinion: 先隔离，等疫苗生产企业评估质量影响
+                        from_state: awaiting_confirmation
+                        to_state: confirmed
+                        details: 处置结论已固化，台账写回载荷就绪
+                        created_at: "2026-10-20T04:10:22+08:00"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+
+  /v1/runs/{id}/confirm:
+    post:
+      tags: [人工确认]
+      summary: 确认一条待确认的判定
+      description: |
+        整条链上唯一由人推进业务状态的入口，只有药学部主管身份能做。
+
+        确认做两件事：把结论从「待确认」推到「已确认」并把台账要写的内容固化下来；
+        确认成立之后触发那一段出站写回（写冷链台账、通知接种门诊）。
+
+        处置结论取值固定四个：isolate（隔离）、pending_manufacturer_evaluation（待疫苗生产企业评估）、
+        release（放行）、scrap（报损）。批次到底能不能用由疫苗生产企业评估质量影响、
+        再由主管确认决定，系统不代为判断。
+      operationId: confirmRun
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmRequest"
+            examples:
+              isolate:
+                summary: 先隔离，等疫苗生产企业评估
+                value:
+                  actor: 药学部主管张
+                  disposition: isolate
+                  opinion: 夜间断电约 4 小时，峰值 12.4℃，先隔离整柜，等疫苗生产企业评估质量影响
+      responses:
+        "200":
+          description: 确认成立，已固化台账写回载荷
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmResponse"
+              examples:
+                confirmed:
+                  summary: 确认成立
+                  value:
+                    run_id: run_3f9c1a7d5b2e4c08
+                    previous_state: awaiting_confirmation
+                    state: confirmed
+                    confirmed_by: 药学部主管张
+                    confirmed_at: "2026-10-20T04:10:22+08:00"
+                    disposition: isolate
+                    disposition_label: 隔离
+                    opinion: 夜间断电约 4 小时，峰值 12.4℃，先隔离整柜，等疫苗生产企业评估质量影响
+                    external_ref: cc-point-vax-freezer-01-20261019T191000Z
+                    idempotency_key: 54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae
+                    writeback_state: pending
+                    payload_frozen: true
+                    note: 结论已确认并固化；台账写入与门诊通知是确认之后的另一段流程
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+
+  /v1/runs/{id}/reject:
+    post:
+      tags: [人工确认]
+      summary: 否决一条判定
+      description: |
+        被否决的判定不写冷链台账：台账里多一条没发生过的越温，
+        比少记一条更麻烦——前者会让越温统计对不上真实温控记录。
+
+        否决时不需要处置结论：处置结论只在成立时才有意义。
+      operationId: rejectRun
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectRequest"
+            examples:
+              rejected:
+                summary: 判定为记录仪探头脱落，不成立
+                value:
+                  actor: 药学部主管张
+                  opinion: 同期探头读数在同柜另一支记录仪上正常，判为探头脱落，越温不成立
+      responses:
+        "200":
+          description: 否决成立
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmResponse"
+              examples:
+                rejected:
+                  summary: 否决成立
+                  value:
+                    run_id: run_3f9c1a7d5b2e4c08
+                    previous_state: awaiting_confirmation
+                    state: rejected
+                    confirmed_by: 药学部主管张
+                    confirmed_at: "2026-10-20T04:12:40+08:00"
+                    opinion: 同期探头读数在同柜另一支记录仪上正常，判为探头脱落，越温不成立
+                    external_ref: cc-point-vax-freezer-01-20261019T191000Z
+                    idempotency_key: 54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae
+                    payload_frozen: false
+                    note: 结论已否决；本次不写冷链台账、不通知接种门诊
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+
+  /v1/runs/{id}/writeback/retry:
+    post:
+      tags: [写回补偿]
+      summary: 补偿重放一次台账写回
+      description: |
+        把一条没写进冷链台账的越温补上。
+
+        它不是确认：载荷、幂等键与 external_ref 全是上次确认时定下的那份，
+        重放不改内容——重放的人并没有对内容做任何新决定。
+        所以经办（日常跑判定的人）拿得到它，而确认权仍然只在主管手上。
+      operationId: retryWriteback
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      responses:
+        "200":
+          description: 补偿重放结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetryWritebackResponse"
+              examples:
+                written:
+                  summary: 台账与通知本次都写成了
+                  value:
+                    run_id: run_9a4d2e7c8b1f3d55
+                    external_ref: cc-point-vax-freezer-01-20261021T140500Z
+                    idempotency_key: 9f1c6b0d5e7a4c2388d0b1f6e3a2c5d7b8e40a19c2d3f6b5e8a1c4d7f0b3e6a9
+                    ledger_written: true
+                    ledger_skipped: false
+                    notification_sent: true
+                    notification_skipped: false
+                    ledger_attempts: 1
+                    notification_attempts: 1
+                    writeback_state: written_back
+                    compensation: true
+                    note: 台账与通知两处本次都写成了
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+
+  /v1/writebacks/pending:
+    get:
+      tags: [写回补偿]
+      summary: 待补偿写回清单
+      description: |
+        回答「哪些越温还没进台账」。出站写回退避重试耗尽后越温进这份清单，
+        等人补发；它是「台账写不进去」这件事唯一可见的出口。
+      operationId: listPendingWritebacks
+      responses:
+        "200":
+          description: 待补偿清单
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PendingWritebacksResponse"
+              examples:
+                pending:
+                  summary: 有一条越温还没进台账
+                  value:
+                    pending_count: 1
+                    open_alert_count: 1
+                    items:
+                      - run_id: run_9a4d2e7c8b1f3d55
+                        target: ledger
+                        state: pending_writeback
+                        external_ref: cc-point-vax-freezer-01-20261021T140500Z
+                        idempotency_key: 9f1c6b0d5e7a4c2388d0b1f6e3a2c5d7b8e40a19c2d3f6b5e8a1c4d7f0b3e6a9
+                        error_code: E_LEDGER_UNAVAILABLE
+                        error_detail: 台账侧返回 503，退避重试 2 次后仍失败
+                        attempts: 3
+                        failures: 3
+                        run_state: confirmed
+                        point_id: point-vax-freezer-01
+                        updated_at: "2026-10-22T09:15:44+08:00"
+                    alerts:
+                      - run_id: run_9a4d2e7c8b1f3d55
+                        target: ledger
+                        state: open
+                        error_code: E_LEDGER_UNAVAILABLE
+                        error_detail: 台账侧返回 503，退避重试 2 次后仍失败
+                        attempts: 3
+                        failures: 3
+                        first_failed_at: "2026-10-22T09:15:41+08:00"
+                        last_failed_at: "2026-10-22T09:15:44+08:00"
+                        created_at: "2026-10-22T09:15:41+08:00"
+                        updated_at: "2026-10-22T09:15:44+08:00"
+                empty:
+                  summary: 没有待补偿的越温
+                  value:
+                    pending_count: 0
+                    open_alert_count: 0
+                    items: []
+                    alerts: []
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+
+  /v1/points:
+    get:
+      tags: [温区配置]
+      summary: 已登记的点位温区配置清单
+      description: |
+        回答「这台冷柜现在按什么温区判」：判定结论里的 2~8℃ 从哪来，
+        复核的人第一句要问的就是这个。
+
+        清单按 point_id 升序。已判定的历史结论仍按判定当时的配置快照复算，
+        不受这里的更新影响。
+      operationId: listPointProfiles
+      responses:
+        "200":
+          description: 温区配置清单
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointProfileListResponse"
+              examples:
+                registered:
+                  summary: 已登记两个点位
+                  value:
+                    count: 2
+                    profiles:
+                      - point_id: point-vax-freezer-01
+                        zone_min_c: 2
+                        zone_max_c: 8
+                        sample_interval_sec: 300
+                        min_excursion_minutes: 20
+                        hysteresis_c: 0.5
+                        accuracy_limit_c: 0.5
+                        products:
+                          - product_name: 某疫苗制品
+                            zone_min_c: 2
+                            zone_max_c: 8
+                            zone_ref: 疫苗储存和运输管理规范（2017 年版）
+                      - point_id: point-fridge-cold-02
+                        zone_min_c: 2
+                        zone_max_c: 8
+                        sample_interval_sec: 300
+                        min_excursion_minutes: 20
+                        hysteresis_c: 0.5
+                        accuracy_limit_c: 0.5
+                    note: 清单按 point_id 升序；已判定的历史结论仍按判定当时的配置快照复算，不受这里的更新影响
+                empty:
+                  summary: 还没有登记任何点位
+                  value:
+                    count: 0
+                    profiles: []
+                    note: 清单按 point_id 升序；已判定的历史结论仍按判定当时的配置快照复算，不受这里的更新影响
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+
+  /v1/points/{point_id}/profile:
+    put:
+      tags: [温区配置]
+      summary: 登记或更新一个点位的温区配置
+      description: |
+        改的是判定口径，所以要「更新点位温区配置」这一项权限（经办与主管持有），
+        调阅岗只看不改，投递通道两者都不持有。
+
+        三条规矩：
+          - 写进去的是**整份**配置，不做局部合并——库里不留半新半旧的拼装结果；
+          - 校验不过就**不落库**：库里那份配置原样留着，继续可用；
+          - 路径里的 point_id 与请求体里的 point_id 必须一致，不一致直接拒绝。
+
+        校验口径与判定时完全一致：zone_min_c 不得大于 zone_max_c、
+        min_excursion_minutes 与 sample_interval_sec 必须为正数。
+        「不猜、不顶替」——门槛留空意味着「不知道连续超限多久才算越温」，
+        系统一旦替现场填个默认值，结论就成了系统的猜测。
+      operationId: updatePointProfile
+      parameters:
+        - name: point_id
+          in: path
+          required: true
+          description: 这份配置适用的点位。
+          schema:
+            type: string
+          example: point-vax-freezer-01
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PointProfileInput"
+            examples:
+              vaccineFridge:
+                summary: 疫苗冷藏库 2~8℃
+                value:
+                  point_id: point-vax-freezer-01
+                  zone_min_c: 2
+                  zone_max_c: 8
+                  sample_interval_sec: 300
+                  min_excursion_minutes: 20
+                  hysteresis_c: 0.5
+                  accuracy_limit_c: 0.5
+                  products:
+                    - product_name: 某疫苗制品
+                      zone_min_c: 2
+                      zone_max_c: 8
+                      zone_ref: 疫苗储存和运输管理规范（2017 年版）
+      responses:
+        "200":
+          description: 配置已登记生效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PointProfileResponse"
+              examples:
+                updated:
+                  summary: 登记生效
+                  value:
+                    point_id: point-vax-freezer-01
+                    profile:
+                      point_id: point-vax-freezer-01
+                      zone_min_c: 2
+                      zone_max_c: 8
+                      sample_interval_sec: 300
+                      min_excursion_minutes: 20
+                      hysteresis_c: 0.5
+                      accuracy_limit_c: 0.5
+                      products:
+                        - product_name: 某疫苗制品
+                          zone_min_c: 2
+                          zone_max_c: 8
+                          zone_ref: 疫苗储存和运输管理规范（2017 年版）
+                    updated_at: "2026-10-20T08:05:11+08:00"
+                    note: 配置已登记生效；之后新建的判定按这份配置判，已判定的历史结论仍按当时的配置快照复算
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+
+  /v1/summary:
+    get:
+      tags: [运行摘要]
+      summary: 运行摘要
+      description: |
+        回答运维站在服务前最常问的三句：现在有事吗、哪一步慢、还有多少条没进台账。
+
+        窗口内发生的事（采样数、判定段数、失败段数、模型调用数与降级率）
+        与此刻还欠着的事（待确认、待写回、挂着的告警）分开报：
+        前者是「昨夜到现在」，后者是「现在还有几条没人管」。
+
+        取数走索引范围扫描，逐小时分解走小时级聚合表——
+        这个端点被轮询，扫全表会直接拖垮主路径。
+
+        只读：不推进任何业务状态，也不发任何出站请求。
+      operationId: getSummary
+      responses:
+        "200":
+          description: 运行摘要
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryResponse"
+              examples:
+                busy:
+                  summary: 昨夜越温一次，还有一条没进台账
+                  value:
+                    generated_at: "2026-10-22T12:00:00Z"
+                    window_hours: 24
+                    window_start: "2026-10-21T12:00:00Z"
+                    window_end: "2026-10-22T12:00:00Z"
+                    events: 1204
+                    runs: 3
+                    failed_runs: 1
+                    degraded_runs: 1
+                    awaiting_confirmation: 1
+                    pending_writebacks: 1
+                    open_writeback_alerts: 1
+                    model_calls: 5
+                    degraded_model_calls: 2
+                    failed_model_calls: 1
+                    degrade_rate: 0.4
+                    running_runs: 0
+                    queued_runs: 0
+                    retrying_runs: 0
+                    hourly:
+                      - hour_start: "2026-10-22T09:00:00Z"
+                        event_count: 120
+                        excursion_count: 1
+                        peak_temperature_c: 12.4
+                        points: 3
+                    hourly_covered_hours: 1
+                    notes:
+                      - 有越温还没进冷链台账：先看 GET /v1/writebacks/pending 的待补偿清单
+                quiet:
+                  summary: 昨夜无事
+                  value:
+                    generated_at: "2026-10-22T12:00:00Z"
+                    window_hours: 24
+                    window_start: "2026-10-21T12:00:00Z"
+                    window_end: "2026-10-22T12:00:00Z"
+                    events: 288
+                    runs: 0
+                    failed_runs: 0
+                    degraded_runs: 0
+                    awaiting_confirmation: 0
+                    pending_writebacks: 0
+                    open_writeback_alerts: 0
+                    model_calls: 0
+                    degraded_model_calls: 0
+                    failed_model_calls: 0
+                    degrade_rate: 0
+                    running_runs: 0
+                    queued_runs: 0
+                    retrying_runs: 0
+                    hourly: []
+                    hourly_covered_hours: 0
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/RoleRequiredError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Bearer 令牌。凭据只从环境变量读，进程内不落盘、不写日志。
+
+        令牌命中哪一把凭据，就是哪个身份：记录仪 / 边缘网关（只投递）、
+        药学部冷链管理员（经办）、药学部主管（审核）、质控 / 院感（调阅）。
+        凭据只管进门，权限才管做事——越权一律 403 与 E_ROLE_REQUIRED。
+
+  parameters:
+    RunID:
+      name: id
+      in: path
+      required: true
+      description: 判定 run 的标识。
+      schema:
+        type: string
+      example: run_3f9c1a7d5b2e4c08
+
+  schemas:
+    Error:
+      type: object
+      description: 统一错误响应体。调用方按 error_code 区分处理方式，不必解析中文文案。
+      properties:
+        error_code:
+          type: string
+          description: 机器可读的错误码。
+          example: E_VALIDATION
+        message:
+          type: string
+          description: 给人看的一句话说明。
+          example: 缺少 point_id
+        details:
+          type: string
+          description: 补充细节（可缺省）。
+          example: 请求体里的 point_id 为空
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: coldchain-temp-assessment
+        version:
+          type: string
+          example: 0.1.0
+
+    VersionResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          example: coldchain-temp-assessment
+        version:
+          type: string
+          example: 0.1.0
+
+    TemperatureEventInput:
+      type: object
+      description: 记录仪上报的一条温度事件（原始上报，未规范化）。
+      required: [point_id, measured_at, temperature_c]
+      properties:
+        point_id:
+          type: string
+          description: 温控点标识。
+          example: point-vax-freezer-01
+        device_id:
+          type: string
+          description: 记录仪标识。
+          example: device-recorder-0001
+        device_name:
+          type: string
+          description: 设备登记名。
+          example: 疫苗冷藏库温度记录仪
+        measured_at:
+          type: string
+          format: date-time
+          description: 测量时刻。必须带时区偏移（如 +08:00），只给本地时刻的写法一律拒绝。
+          example: "2026-10-20T03:15:00+08:00"
+        temperature_c:
+          type: number
+          description: 温度值（℃）。量程 [-80, 120]，越限拒绝。
+          example: 11.4
+        unit:
+          type: string
+          description: 温度单位。F 按 (F-32)*5/9 换算，同时保留原始值与原始单位。
+          enum: [C, F]
+          example: C
+        humidity_pct:
+          type: number
+          description: 相对湿度（%）。量程 [0, 100]。
+          example: 62.5
+        battery_pct:
+          type: number
+          description: 电量（%）。量程 [0, 100]。
+          example: 91
+        accuracy_c:
+          type: number
+          description: 设备自报的测温精度（℃）。超出该类设备规范上限时打「精度不足，仅供参考」标记。
+          example: 0.3
+        source:
+          type: string
+          description: 数据来源。
+          enum: [recorder, edge-gateway, manual-upload]
+          example: recorder
+        alarm_flag:
+          type: boolean
+          description: 设备是否自带告警位。
+          example: true
+        events:
+          type: array
+          description: 设备事件。未知类型显式拒绝，不静默丢弃。
+          items:
+            type: string
+            enum: [door_open, power_loss, defrost]
+          example: [door_open]
+
+    PrecisionNote:
+      type: object
+      description: 精度联动结论：设备自报精度超出规范上限时，结论仅供参考。
+      properties:
+        limited:
+          type: boolean
+          example: false
+        limit_c:
+          type: number
+          description: 本次判定采用的精度上限（℃）。
+          example: 0.5
+        declared_c:
+          type: number
+          description: 设备自报的测温精度（℃）；未声明时这一项不出现，不冒充 0。
+          example: 0.3
+        tag:
+          type: string
+          description: 精度不足时的固定标注文案。
+          example: 精度不足，仅供参考
+        detail:
+          type: string
+          description: 精度不足时的具体数值说明。
+          example: 设备声明测温精度 1.20℃，超出该类设备规范上限 0.50℃
+
+    EventAccepted:
+      type: object
+      description: 事件入库回执。
+      properties:
+        event_id:
+          type: string
+          example: evt_87b2e6ed0a27607907a3b7215aca92b0
+        duplicate:
+          type: boolean
+          description: 是否命中幂等键（同一次采样此前已入库）。
+          example: false
+        point_id:
+          type: string
+          example: point-vax-freezer-01
+        measured_at:
+          type: string
+          format: date-time
+          example: "2026-10-20T03:15:00+08:00"
+        accepted_at:
+          type: string
+          format: date-time
+          example: "2026-10-20T03:15:01+08:00"
+        run_id:
+          type: string
+          description: 并入的判定 run；判定 run 尚未建立时这一项不出现。
+          example: run_3f9c1a7d5b2e4c08
+        run_state:
+          type: string
+          description: 该 run 的状态。
+          example: pending
+        note:
+          type: string
+          example: 事件已入库；判定 run 由调度器按点位与窗口建立，同一越温窗口只判一次
+        precision:
+          $ref: "#/components/schemas/PrecisionNote"
+
+    SkipReason:
+      type: object
+      description: 一条被跳过记录的原因。
+      properties:
+        row:
+          type: integer
+          description: 在导出文件里的行号。
+          example: 3
+        code:
+          type: string
+          description: 机器可读的原因分类。
+          example: unparsable_measured_at
+        reason:
+          type: string
+          description: 给人看的原因文本。
+          example: 测量时间不是带时区偏移的 RFC3339 时刻
+        point_id:
+          type: string
+          example: point-vax-freezer-01
+        measured_at:
+          type: string
+          format: date-time
+          example: "2026-10-20T03:15:00+08:00"
+
+    ImportResult:
+      type: object
+      description: 批量导入回执。
+      properties:
+        imported:
+          type: integer
+          description: 已入库行数。
+          example: 84
+        skipped:
+          type: integer
+          description: 跳过行数。
+          example: 0
+        total_rows:
+          type: integer
+          description: 文件里的数据行总数（不含表头）。
+          example: 84
+        duplicates:
+          type: integer
+          description: 命中幂等键、未重复入库的行数。
+          example: 0
+        dry_run:
+          type: boolean
+          description: 本次是否只校验未落库。
+          example: false
+        skip_reasons:
+          type: array
+          description: 逐条跳过原因。
+          items:
+            $ref: "#/components/schemas/SkipReason"
+        encoding:
+          type: string
+          description: 实际使用的解码编码。
+          example: utf-8
+        encoding_fallback:
+          type: boolean
+          description: 是否发生了编码回退（原始文件不是合法 UTF-8，已回退 GBK 解析）。
+          example: false
+        original_bytes:
+          type: integer
+          description: 原始文件字节数。
+          example: 12038
+        extra_columns:
+          type: array
+          description: 文件里多出来、已忽略并计数的列名。
+          items:
+            type: string
+        extra_values:
+          type: integer
+          description: 多出来的列值条数。
+          example: 0
+        missing_columns:
+          type: array
+          description: 文件里缺失的列名。
+          items:
+            type: string
+        note:
+          type: string
+          example: 导入完成：合法行已单事务入库；跳过的行见 skip_reasons
+
+    RunSummary:
+      type: object
+      description: 一条判定 run 的总体状态。
+      properties:
+        run_id:
+          type: string
+          example: run_3f9c1a7d5b2e4c08
+        point_id:
+          type: string
+          example: point-vax-freezer-01
+        state:
+          type: string
+          description: 业务状态。
+          example: awaiting_confirmation
+        exec_state:
+          type: string
+          description: 执行态。
+          example: succeeded
+        window_start:
+          type: string
+          format: date-time
+          description: 越温窗口起点。
+          example: "2026-10-20T03:10:00+08:00"
+        window_end:
+          type: string
+          format: date-time
+          description: 越温窗口终点。
+          example: "2026-10-20T03:25:00+08:00"
+        external_ref:
+          type: string
+          description: 台账侧的外部引用（同一点同一窗口稳定不变）。
+          example: cc-point-vax-freezer-01-20261019T191000Z
+        idempotency_key:
+          type: string
+          description: 窗口幂等键。
+          example: 54b35c7f136371619ea6a5313714d1ac3d4177e3f835bcc97eb1087e6f7dddae
+        failed_step:
+          type: string
+          description: 失败停住的那一步。
+          example: attribute
+        error_code:
+          type: string
+          description: 失败原因的错误码。
+          example: E_MODEL_UNAVAILABLE
+        writeback_state:
+          type: string
+          description: 台账写回状态。
+          example: pending
+        written_back_at:
+          type: string
+          format: date-time
+          description: 台账写入落成的时刻。
+          example: "2026-10-22T09:12:03+08:00"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-10-20T03:26:10+08:00"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-10-20T03:26:12+08:00"
+        zone:
+          type: string
+          description: 本次判定采用的温区。
+          example: 2~8℃
+        profile_present:
+          type: boolean
+          description: 判定时是否有可核对的温区配置快照。
+          example: true
+        degraded:
+          type: boolean
+          description: 归因结论是否由降级路径得出。
+          example: false
+        degrade_reason:
+          type: string
+          description: 降级原因的错误码。
+          example: E_MODEL_UNAVAILABLE
+
+    RunListResponse:
+      type: object
+      description: 判定台账清单。
+      properties:
+        count:
+          type: integer
+          description: 本次返回的判定条数。
+          example: 2
+        point_id:
+          type: string
+          description: 本次查询限定的点位；未限定时缺省。
+          example: point-vax-freezer-01
+        from:
+          type: string
+          format: date-time
+          description: 查询区间起点；未限定时缺省。
+          example: "2026-10-19T00:00:00+08:00"
+        to:
+          type: string
+          format: date-time
+          description: 查询区间终点；未限定时缺省。
+          example: "2026-10-26T00:00:00+08:00"
+        runs:
+          type: array
+          description: 判定清单，按窗口起点升序。
+          items:
+            $ref: "#/components/schemas/RunSummary"
+        note:
+          type: string
+          example: 清单按窗口起点升序；窗口起点落在查询区间内的判定才会列出（未设窗口的采样不计入）
+
+    WindowSummary:
+      type: object
+      description: 越温窗口摘要。
+      properties:
+        window_start:
+          type: string
+          format: date-time
+          example: "2026-10-20T03:10:00+08:00"
+        window_end:
+          type: string
+          format: date-time
+          example: "2026-10-20T03:25:00+08:00"
+        peak_temperature_c:
+          type: number
+          description: 窗口内峰值温度（℃）。
+          example: 12.4
+        duration_minutes:
+          type: integer
+          description: 越温持续分钟数。
+          example: 15
+        sample_count:
+          type: integer
+          description: 窗口内的采样条数。
+          example: 4
+        zone:
+          type: string
+          example: 2~8℃
+        zone_source:
+          type: string
+          description: 温区来源：点位配置或制品说明书条目。
+          example: point_profile
+        peak_at:
+          type: string
+          format: date-time
+          description: 峰值出现时刻。
+          example: "2026-10-20T03:20:00+08:00"
+
+    StepTimelineEntry:
+      type: object
+      description: 步骤时间线上的一步。
+      properties:
+        seq:
+          type: integer
+          example: 3
+        step_name:
+          type: string
+          example: attribute
+        state:
+          type: string
+          example: succeeded
+        attempt:
+          type: integer
+          description: 第几次尝试（重试过的步骤会大于 1）。
+          example: 2
+        started_at:
+          type: string
+          format: date-time
+          example: "2026-10-20T03:26:11+08:00"
+        ended_at:
+          type: string
+          format: date-time
+          description: 结束时刻；仍在进行中时缺省。
+          example: "2026-10-20T03:26:11+08:00"
+        duration_ms:
+          type: integer
+          example: 1530
+        duration_us:
+          type: integer
+          example: 1530440
+        offset_ms:
+          type: integer
+          description: 相对 run 起点的毫秒偏移。
+          example: 15
+        offset_us:
+          type: integer
+          example: 15980
+        end_offset_ms:
+          type: integer
+          example: 1545
+        end_offset_us:
+          type: integer
+          example: 1546420
+        start_pct:
+          type: number
+          description: 该步在整条时间线上的起点位置（百分比）。
+          example: 75
+        width_pct:
+          type: number
+          description: 该步在整条时间线上的宽度（百分比）。
+          example: 24
+        ongoing:
+          type: boolean
+          example: false
+        is_current:
+          type: boolean
+          example: false
+        payload_kind:
+          type: string
+          description: 这一步产物所属的分码。
+          example: attribution
+        payload:
+          description: 这一步的产物正文（时间线端点不带正文）。
+        error:
+          type: string
+          description: 失败原因文本。
+          example: 模型端点不可达，已退回规则基线归因
+        error_code:
+          type: string
+          description: 失败原因的错误码。
+          example: E_MODEL_UNAVAILABLE
+        backoff_ms:
+          type: integer
+          description: 本次尝试前的退避时长（毫秒）。
+          example: 1000
+
+    TimelineStep:
+      type: object
+      description: 判定当前停住的那一步。
+      properties:
+        seq:
+          type: integer
+          example: 5
+        step_name:
+          type: string
+          example: await_confirmation
+        state:
+          type: string
+          example: succeeded
+        attempt:
+          type: integer
+          example: 1
+        started_at:
+          type: string
+          format: date-time
+          example: "2026-10-20T03:26:12+08:00"
+        duration_ms:
+          type: integer
+          example: 1
+
+    TimelineError:
+      type: object
+      description: 步骤失败记录，按时间倒序。
+      properties:
+        step_name:
+          type: string
+          example: attribute
+        seq:
+          type: integer
+          example: 3
+        attempt:
+          type: integer
+          example: 1
+        error_code:
+          type: string
+          example: E_MODEL_UNAVAILABLE
+        message:
+          type: string
+          example: 模型端点不可达，已退回规则基线归因
+        at:
+          type: string
+          format: date-time
+          example: "2026-10-20T03:26:11+08:00"
+
+    RunDetailResponse:
+      type: object
+      description: 一条判定的详情。
+      properties:
+        run:
+          $ref: "#/components/schemas/RunSummary"
+        window:
+          $ref: "#/components/schemas/WindowSummary"
+        steps:
+          type: array
+          description: 步骤时间线。
+          items:
+            $ref: "#/components/schemas/StepTimelineEntry"
+        step_count:
+          type: integer
+          description: 步骤条数。
+          example: 5
+        current_step:
+          $ref: "#/components/schemas/TimelineStep"
+        recent_errors:
+          type: array
+          description: 最近的失败，按时间倒序。
+          items:
+            $ref: "#/components/schemas/TimelineError"
+        products:
+          type: object
+          description: 按分码取回的结论产物（不同形状各走各的分码）。
+          additionalProperties: true
+
+    RunTimelineResponse:
+      type: object
+      description: 一次判定的运行时间线。
+      properties:
+        run_id:
+          type: string
+          example: run_3f9c1a7d5b2e4c08
+        run_started_at:
+          type: string
+          description: run 的起点时刻；这条判定还没有落下任何步骤记录时为空串。
+          example: "2026-10-20T03:26:10+08:00"
+        run_ended_at:
+          type: string
+          format: date-time
+          example: "2026-10-20T03:26:12+08:00"
+        total_duration_ms:
+          type: integer
+          example: 2044
+        step_count:
+          type: integer
+          example: 5
+        current_step:
+          $ref: "#/components/schemas/TimelineStep"
+        entries:
+          type: array
+          description: 时间线上的每一步（不带产物正文）。
+          items:
+            $ref: "#/components/schemas/StepTimelineEntry"
+        recent_errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimelineError"
+
+    AuditEntry:
+      type: object
+      description: 审计链上的一条记录（模型调用或人工确认动作）。
+      properties:
+        seq:
+          type: integer
+          example: 1
+        entry_type:
+          type: string
+          description: 记录类型。
+          example: model_call
+        step_name:
+          type: string
+          example: attribute
+        schema_name:
+          type: string
+          example: attribution_v1
+        model:
+          type: string
+          example: qwen2.5-14b-instruct
+        outcome:
+          type: string
+          example: degraded
+        degraded:
+          type: boolean
+          example: true
+        error_code:
+          type: string
+          example: E_MODEL_UNAVAILABLE
+        latency_ms:
+          type: integer
+          example: 1530
+        prompt_tokens:
+          type: integer
+          example: 1840
+        completion_tokens:
+          type: integer
+          example: 260
+        total_tokens:
+          type: integer
+          example: 2100
+        cost_amount:
+          type: number
+          description: 估算成本；单价表没配时这一项不出现，不记 0。
+          example: 0.021
+        cost_currency:
+          type: string
+          example: CNY
+        cost_status:
+          type: string
+          description: 成本口径：known 或 unknown。
+          example: unknown
+        actor:
+          type: string
+          description: 执行动作的人（人工确认记录）。
+          example: 药学部主管张
+        action:
+          type: string
+          description: 动作（人工确认记录）。
+          example: confirm
+        disposition:
+          type: string
+          description: 处置结论（人工确认记录）。
+          example: isolate
+        opinion:
+          type: string
+          description: 主管意见（人工确认记录）。
+          example: 先隔离，等疫苗生产企业评估质量影响
+        from_state:
+          type: string
+          example: awaiting_confirmation
+        to_state:
+          type: string
+          example: confirmed
+        details:
+          type: string
+          example: 处置结论已固化，台账写回载荷就绪
+        prompt_digest:
+          type: string
+          description: 提示词摘要（原文不留）。
+          example: sha256:6f1c2b
+        prompt_chars:
+          type: integer
+          example: 5120
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-10-20T03:26:11+08:00"
+
+    AuditSummaryResponse:
+      type: object
+      description: 一条判定的审计链。
+      properties:
+        run_id:
+          type: string
+          example: run_3f9c1a7d5b2e4c08
+        entry_count:
+          type: integer
+          example: 2
+        model_call_count:
+          type: integer
+          example: 1
+        confirmation_count:
+          type: integer
+          example: 1
+        total_prompt_tokens:
+          type: integer
+          example: 1840
+        total_completion_tokens:
+          type: integer
+          example: 260
+        total_tokens:
+          type: integer
+          example: 2100
+        known_cost_amount:
+          type: number
+          description: 已知单价部分的总成本；单价未知时这一项不出现。
+          example: 0.021
+        cost_currency:
+          type: string
+          example: CNY
+        cost_status:
+          type: string
+          description: 成本口径：known 或 unknown。
+          example: unknown
+        unknown_cost_count:
+          type: integer
+          description: 单价未知、没估出成本的调用条数。
+          example: 1
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEntry"
+
+    ConfirmRequest:
+      type: object
+      description: 确认请求。
+      required: [actor, disposition]
+      properties:
+        actor:
+          type: string
+          description: 执行动作的人（药学部主管标识）。
+          example: 药学部主管张
+        disposition:
+          type: string
+          description: 处置结论。取值固定四个，不做大小写变体。
+          enum: [isolate, pending_manufacturer_evaluation, release, scrap]
+          example: isolate
+        opinion:
+          type: string
+          description: 主管意见（留痕用）。
+          example: 夜间断电约 4 小时，峰值 12.4℃，先隔离整柜，等疫苗生产企业评估质量影响
+
+    RejectRequest:
+      type: object
+      description: 否决请求。否决不需要处置结论。
+      required: [actor]
+      properties:
+        actor:
+          type: string
+          description: 执行动作的人（药学部主管标识）。
+          example: 药学部主管张
+        opinion:
+          type: string
+          description: 否决理由（留痕用）。
+          example: 同期探头读数在同柜另一支记录仪上正常，判为探头脱落，越温不成立
+
+    WritebackSummary:
+      type: object
+      description: 出站写回的结果摘要。台账与通知分两栏：两处的成败互不相干。
+      properties:
+        external_ref:
+          type: string
+          example: cc-point-vax-freezer-01-20261019T191000Z
+        idempotency_key:
+          type: string
+          example: 54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae
+        ledger_written:
+          type: boolean
+          example: true
+        ledger_skipped:
+          type: boolean
+          example: false
+        ledger_error:
+          type: string
+          description: 台账写入失败的错误码。
+          example: E_LEDGER_UNAVAILABLE
+        notification_sent:
+          type: boolean
+          example: true
+        notification_skipped:
+          type: boolean
+          example: false
+        notification_error:
+          type: string
+          description: 通知发送失败的错误码。
+          example: E_NOTIFY_UNAVAILABLE
+        writeback_state:
+          type: string
+          example: written_back
+        note:
+          type: string
+          example: 台账与通知两处本次都写成了
+
+    ConfirmResponse:
+      type: object
+      description: 确认 / 否决回执。
+      properties:
+        run_id:
+          type: string
+          example: run_3f9c1a7d5b2e4c08
+        previous_state:
+          type: string
+          description: 动作前的业务状态。
+          example: awaiting_confirmation
+        state:
+          type: string
+          description: 动作后的业务状态。
+          example: confirmed
+        confirmed_by:
+          type: string
+          description: 执行动作的人。
+          example: 药学部主管张
+        confirmed_at:
+          type: string
+          format: date-time
+          example: "2026-10-20T04:10:22+08:00"
+        disposition:
+          type: string
+          description: 处置结论（否决时缺省）。
+          example: isolate
+        disposition_label:
+          type: string
+          description: 处置结论的中文短标签。
+          example: 隔离
+        opinion:
+          type: string
+          example: 夜间断电约 4 小时，峰值 12.4℃，先隔离整柜
+        external_ref:
+          type: string
+          example: cc-point-vax-freezer-01-20261019T191000Z
+        idempotency_key:
+          type: string
+          example: 54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae
+        writeback_state:
+          type: string
+          example: pending
+        payload_frozen:
+          type: boolean
+          description: 台账写回载荷是否已固化。
+          example: true
+        writeback:
+          $ref: "#/components/schemas/WritebackSummary"
+        note:
+          type: string
+          example: 结论已确认并固化；台账写入与门诊通知是确认之后的另一段流程
+
+    PendingWriteback:
+      type: object
+      description: 一条待补偿的写回。
+      properties:
+        run_id:
+          type: string
+          example: run_9a4d2e7c8b1f3d55
+        target:
+          type: string
+          description: 写回目标：ledger（冷链台账）或 notification（接种门诊通知）。
+          example: ledger
+        state:
+          type: string
+          example: pending_writeback
+        external_ref:
+          type: string
+          example: cc-point-vax-freezer-01-20261021T140500Z
+        idempotency_key:
+          type: string
+          example: 9f1c6b0d5e7a4c2388d0b1f6e3a2c5d7b8e40a19c2d3f6b5e8a1c4d7f0b3e6a9
+        error_code:
+          type: string
+          example: E_LEDGER_UNAVAILABLE
+        error_detail:
+          type: string
+          example: 台账侧返回 503，退避重试 2 次后仍失败
+        attempts:
+          type: integer
+          example: 3
+        failures:
+          type: integer
+          example: 3
+        run_state:
+          type: string
+          example: confirmed
+        point_id:
+          type: string
+          example: point-vax-freezer-01
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-10-22T09:15:44+08:00"
+
+    WritebackAlert:
+      type: object
+      description: 一条写回告警留痕。
+      properties:
+        run_id:
+          type: string
+          example: run_9a4d2e7c8b1f3d55
+        target:
+          type: string
+          example: ledger
+        state:
+          type: string
+          description: 告警状态：open 或 resolved。
+          example: open
+        error_code:
+          type: string
+          example: E_LEDGER_UNAVAILABLE
+        error_detail:
+          type: string
+          example: 台账侧返回 503，退避重试 2 次后仍失败
+        attempts:
+          type: integer
+          example: 3
+        failures:
+          type: integer
+          example: 3
+        first_failed_at:
+          type: string
+          format: date-time
+          example: "2026-10-22T09:15:41+08:00"
+        last_failed_at:
+          type: string
+          format: date-time
+          example: "2026-10-22T09:15:44+08:00"
+        resolved_at:
+          type: string
+          format: date-time
+          description: 告警解掉的时刻；未解时缺省。
+          example: "2026-10-22T10:02:11+08:00"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-10-22T09:15:41+08:00"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-10-22T09:15:44+08:00"
+
+    PendingWritebacksResponse:
+      type: object
+      description: 待补偿写回清单。
+      properties:
+        pending_count:
+          type: integer
+          example: 1
+        open_alert_count:
+          type: integer
+          example: 1
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PendingWriteback"
+        alerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/WritebackAlert"
+
+    RetryWritebackResponse:
+      type: object
+      description: 补偿重放回执。
+      properties:
+        run_id:
+          type: string
+          example: run_9a4d2e7c8b1f3d55
+        external_ref:
+          type: string
+          example: cc-point-vax-freezer-01-20261021T140500Z
+        idempotency_key:
+          type: string
+          example: 9f1c6b0d5e7a4c2388d0b1f6e3a2c5d7b8e40a19c2d3f6b5e8a1c4d7f0b3e6a9
+        ledger_written:
+          type: boolean
+          example: true
+        ledger_skipped:
+          type: boolean
+          example: false
+        ledger_error:
+          type: string
+          example: E_LEDGER_UNAVAILABLE
+        ledger_error_detail:
+          type: string
+          example: 台账侧返回 503
+        ledger_attempts:
+          type: integer
+          example: 1
+        notification_sent:
+          type: boolean
+          example: true
+        notification_skipped:
+          type: boolean
+          example: false
+        notification_error:
+          type: string
+          example: E_NOTIFY_UNAVAILABLE
+        notification_error_detail:
+          type: string
+          example: 通知系统返回 502
+        notification_attempts:
+          type: integer
+          example: 1
+        writeback_state:
+          type: string
+          example: written_back
+        compensation:
+          type: boolean
+          description: 本次是否为补偿重放。
+          example: true
+        note:
+          type: string
+          example: 台账与通知两处本次都写成了
+
+    ProductProfile:
+      type: object
+      description: 一个制品的温区条目。
+      properties:
+        product_name:
+          type: string
+          example: 某疫苗制品
+        zone_min_c:
+          type: number
+          example: 2
+        zone_max_c:
+          type: number
+          example: 8
+        zone_ref:
+          type: string
+          description: 温区出处（可查的文件或条款）。
+          example: 疫苗储存和运输管理规范（2017 年版）
+
+    DeviceBinding:
+      type: object
+      description: 点位登记的设备。
+      properties:
+        device_id:
+          type: string
+          example: device-recorder-0001
+        device_name:
+          type: string
+          example: 疫苗冷藏库温度记录仪
+
+    PointProfileInput:
+      type: object
+      description: |
+        点位温区配置。写进去的是整份配置，不做局部合并。
+
+        判定门槛三项必须显式填：sample_interval_sec（采样周期，秒）、
+        min_excursion_minutes（成立越温窗口的最短持续分钟数）、
+        hysteresis_c（迟滞带，℃）。留空等于「不知道」，系统不替现场填默认值。
+      required: [zone_min_c, zone_max_c, sample_interval_sec, min_excursion_minutes]
+      properties:
+        point_id:
+          type: string
+          description: 配置适用的点位；不填时取路径里的 point_id。
+          example: point-vax-freezer-01
+        zone_min_c:
+          type: number
+          description: 温区下限（℃）。不得大于 zone_max_c。
+          example: 2
+        zone_max_c:
+          type: number
+          description: 温区上限（℃）。不得超出记录仪量程 [-80, 120]。
+          example: 8
+        sample_interval_sec:
+          type: integer
+          description: 标称采样周期（秒）。必须为正数。
+          example: 300
+        min_excursion_minutes:
+          type: integer
+          description: 成立正式越温窗口的最短持续时长（分钟）。必须为正数。
+          example: 20
+        hysteresis_c:
+          type: number
+          description: 迟滞带（℃）：越限后要回落到 (zone_max_c - hysteresis_c) 以内才算回到温区。
+          example: 0.5
+        accuracy_limit_c:
+          type: number
+          description: 精度上限（℃）；不填时按设备类规范口径取。
+          example: 0.5
+        products:
+          type: array
+          description: 该点位上的逐制品温区条目。
+          items:
+            $ref: "#/components/schemas/ProductProfile"
+        devices:
+          type: array
+          description: 该点位登记的设备清单；为空表示未登记（不表示有歧义）。
+          items:
+            $ref: "#/components/schemas/DeviceBinding"
+
+    PointProfileListResponse:
+      type: object
+      description: 点位温区配置清单。
+      properties:
+        count:
+          type: integer
+          example: 2
+        profiles:
+          type: array
+          description: 各点位的温区配置，按 point_id 升序。
+          items:
+            $ref: "#/components/schemas/PointProfileInput"
+        note:
+          type: string
+          example: 清单按 point_id 升序；已判定的历史结论仍按判定当时的配置快照复算，不受这里的更新影响
+
+    HourlyBucket:
+      type: object
+      description: |
+        一个小时桶的统计（跨点位合并）。
+
+        事件数按采样落库时刻归桶，越温次数按越限窗口起点归桶——
+        跨小时的同一段越温只算在它开始的那一小时，各小时加起来正好等于实际段数。
+      required: [hour_start, event_count, excursion_count, peak_temperature_c, points]
+      properties:
+        hour_start:
+          type: string
+          description: 这个桶的起点（UTC，RFC3339）。
+          example: "2026-10-22T09:00:00Z"
+        event_count:
+          type: integer
+          description: 这一小时入库的采样条数。
+          example: 120
+        excursion_count:
+          type: integer
+          description: 这一小时开始的越温段数。
+          example: 1
+        peak_temperature_c:
+          type: number
+          description: 这一小时的最高温度（℃）。
+          example: 12.4
+        points:
+          type: integer
+          description: 这一小时有采样的点位数。
+          example: 3
+
+    SummaryResponse:
+      type: object
+      description: |
+        运行摘要。窗口内发生的事与此刻还欠着的事分开报；
+        统计窗口、覆盖情况与提醒都随响应给出，免得看的人对着一个数字猜口径。
+      required:
+        - generated_at
+        - window_hours
+        - window_start
+        - window_end
+        - events
+        - runs
+        - failed_runs
+        - degraded_runs
+        - awaiting_confirmation
+        - pending_writebacks
+        - open_writeback_alerts
+        - model_calls
+        - degraded_model_calls
+        - failed_model_calls
+        - degrade_rate
+        - running_runs
+        - queued_runs
+        - retrying_runs
+        - hourly
+        - hourly_covered_hours
+      properties:
+        generated_at:
+          type: string
+          description: 这份摘要的生成时刻（UTC，RFC3339）。
+          example: "2026-10-22T12:00:00Z"
+        window_hours:
+          type: integer
+          description: 统计窗口长度（小时）。
+          example: 24
+        window_start:
+          type: string
+          description: 统计区间起点（UTC，RFC3339）。
+          example: "2026-10-21T12:00:00Z"
+        window_end:
+          type: string
+          description: 统计区间终点（UTC，RFC3339）。
+          example: "2026-10-22T12:00:00Z"
+        events:
+          type: integer
+          description: 窗口内入库的温度采样条数。
+          example: 1204
+        runs:
+          type: integer
+          description: 窗口内新建的判定段数。
+          example: 3
+        failed_runs:
+          type: integer
+          description: 窗口内最终失败的判定段数（步骤重试已耗尽）。
+          example: 1
+        degraded_runs:
+          type: integer
+          description: 窗口内新建且结论降级的判定段数（归因退回了规则基线）。
+          example: 1
+        awaiting_confirmation:
+          type: integer
+          description: 此刻停在「待药学部主管确认」的判定数（当前存量，不按窗口化）。
+          example: 1
+        pending_writebacks:
+          type: integer
+          description: 此刻还没写进冷链台账的写回记录数。
+          example: 1
+        open_writeback_alerts:
+          type: integer
+          description: 此刻还挂着的写回告警数。
+          example: 1
+        model_calls:
+          type: integer
+          description: 窗口内的模型调用总次数。
+          example: 5
+        degraded_model_calls:
+          type: integer
+          description: 其中走了降级路径的次数。
+          example: 2
+        failed_model_calls:
+          type: integer
+          description: 其中失败的次数。
+          example: 1
+        degrade_rate:
+          type: number
+          description: 降级率 = 降级次数 / 模型调用总次数（0~1，保留四位小数）。
+          example: 0.4
+        running_runs:
+          type: integer
+          description: 此刻正在跑步骤链的判定数。
+          example: 0
+        queued_runs:
+          type: integer
+          description: 此刻排队等待的判定数。
+          example: 0
+        retrying_runs:
+          type: integer
+          description: 此刻正退避重试的判定数。
+          example: 0
+        hourly:
+          type: array
+          description: 逐小时分解（跨点位合并），按小时起点升序。
+          items:
+            $ref: "#/components/schemas/HourlyBucket"
+        hourly_covered_hours:
+          type: integer
+          description: 逐小时分解实际覆盖了几个小时；小于 window_hours 时分解可能缺桶。
+          example: 1
+        notes:
+          type: array
+          description: 给看摘要的人留的话：口径提醒、覆盖缺口、降级提示。一切正常时为空。
+          items:
+            type: string
+          example:
+            - 有越温还没进冷链台账：先看 GET /v1/writebacks/pending 的待补偿清单
+
+    PointProfileResponse:
+      type: object
+      description: 点位温区配置登记回执。
+      properties:
+        point_id:
+          type: string
+          example: point-vax-freezer-01
+        profile:
+          $ref: "#/components/schemas/PointProfileInput"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-10-20T08:05:11+08:00"
+        note:
+          type: string
+          example: 配置已登记生效；之后新建的判定按这份配置判，已判定的历史结论仍按当时的配置快照复算
+
+  responses:
+    UnauthorizedError:
+      description: 缺少凭据或凭据不正确。
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            missingToken:
+              summary: 没带 Authorization 头
+              value:
+                error_code: E_UNAUTHORIZED
+                message: 缺少凭据或凭据不正确
+                details: 缺少或无效的入站凭据
+            wrongToken:
+              summary: 令牌不对
+              value:
+                error_code: E_UNAUTHORIZED
+                message: 缺少凭据或凭据不正确
+                details: 缺少或无效的入站凭据
+
+    RoleRequiredError:
+      description: 身份成立但没有这项权限。
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            auditorCannotConfirm:
+              summary: 调阅岗不能确认处置结论
+              value:
+                error_code: E_ROLE_REQUIRED
+                message: 当前身份无权执行该操作
+                details: 当前身份「质控 / 院感（调阅）」无权执行「确认或否决处置结论」：该操作需要「确认或否决处置结论」权限，持该权限的身份为 药学部主管（审核）
+
+    ValidationError:
+      description: 请求不合法：字段缺失、格式错或取值非法。
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            missingField:
+              summary: 缺必填字段
+              value:
+                error_code: E_VALIDATION
+                message: 字段缺失或取值不合法
+                details: 缺少 point_id
+            badZone:
+              summary: 温区上下限颠倒
+              value:
+                error_code: E_VALIDATION
+                message: 字段缺失或取值不合法
+                details: 点位 point-vax-freezer-01 的温区上下限非法：zone_min_c=8.00，zone_max_c=2.00
+            badThreshold:
+              summary: 判定门槛没填
+              value:
+                error_code: E_VALIDATION
+                message: 字段缺失或取值不合法
+                details: 点位 point-vax-freezer-01 的 min_excursion_minutes 必须为正数（当前 0）：连续超限多久才算越温必须显式填写，系统不替现场填默认值
+
+    RangeError:
+      description: 数值超出允许量程。
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            temperatureOutOfRange:
+              summary: 温度越量程
+              value:
+                error_code: E_RANGE
+                message: 数值超出允许量程
+                details: 数值超出允许量程（temperature_c=150.00 超出量程 [-80, 120]）
+
+    RateLimitedError:
+      description: 同一点位投递超过限速阈值，请求被显式拒绝（未入库）。
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            tooManyDeliveries:
+              summary: 超过同点限流
+              value:
+                error_code: E_RATE_LIMITED
+                message: 同一点位投递超出限流上限
+                details: 点位 point-vax-freezer-01 的投递速率超过阈值，请求被拒绝（未入库）
+
+    NotFoundError:
+      description: 对象不存在。
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            runNotFound:
+              summary: 判定 run 不存在
+              value:
+                error_code: E_NOT_FOUND
+                message: 对象不存在
+                details: 判定 run 不存在：run_00000000
+
+    ConflictError:
+      description: 状态冲突：动作与当前状态不相容（如重复确认、越权状态迁移）。
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            alreadyConfirmed:
+              summary: 这条判定已经确认过
+              value:
+                error_code: E_ILLEGAL_TRANSITION
+                message: 业务状态不允许该迁移
+                details: 状态迁移被拒绝：confirmed → confirmed（业务状态迁移表里没有这条边）

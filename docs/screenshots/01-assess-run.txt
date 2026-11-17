@@ -1,0 +1,98 @@
+# ① 记录仪样例批量导入 → 建判定 run → 五步判定链给出结论（CLI 通道）
+# 采集时间：2026-10-26 15:48:59 +0800
+
+$ /tmp/coldchain-evidence/coldchain import --file testdata/recordings_sample.csv --db /tmp/coldchain-evidence/coldchain.db
+{
+  "imported": 84,
+  "skipped": 0,
+  "total_rows": 84,
+  "duplicates": 0,
+  "dry_run": false,
+  "skip_reasons": [],
+  "encoding": "utf-8",
+  "encoding_fallback": false,
+  "original_bytes": 11351,
+  "extra_values": 0
+}
+导入完成：共 84 行，入库 84 条，重复 0 条，跳过 0 条
+
+$ coldchain assess --events testdata/series_excursion.json --profile testdata/point_profile.json --steps --model --ledger --db <本地库>
+（以下为 coldchain assess 的真实 stdout 结论字段；steps 的 payload 明细与 products 全量载荷见同目录 01-assess-run.full.json）
+
+run：
+  run_id: "run_e98c6e6acdf356edeb4659f7d59ca30b"
+  point_id: "point-vax-freezer-01"
+  state: "awaiting_confirmation"
+  exec_state: "succeeded"
+  window_start: "2026-10-20T03:10:00+08:00"
+  window_end: "2026-10-20T03:25:00+08:00"
+  external_ref: "cc-point-vax-freezer-01-20261019T191000Z"
+  idempotency_key: "54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae"
+
+window：
+  start: "2026-10-20T03:10:00+08:00"
+  end: "2026-10-20T03:25:00+08:00"
+  duration_minutes: 15
+  peak_c: 12.4
+  peak_at: "2026-10-20T03:15:00+08:00"
+  zone: "2~8℃"
+  sample_count: 4
+  hysteresis_c: 1
+  merge_count: 0
+  out_of_range_samples: 4
+  min_excursion_minutes: 10
+  sampling_interval_sec: 300
+  interval_source: "point_profile"
+  inferred_interval_sec: 300
+  rise_rate: {"per_minute": 0.48000000000000004, "minutes_to_peak": 15, "peak_c": 12.4, "valid_samples": 7, "excluded_stuck_samples": 0, "excluded_gap_minutes": 0, "usable": true, "note": "温升速率按连续观测段起点到峰值的平均速率折算；探头卡死段与数据缺口均已剔除"}
+  segments: [{"start": "2026-10-20T03:10:00+08:00", "end": "2026-10-20T03:25:00+08:00", "duration_minutes": 15, "peak_c": 12.4, "peak_at": "2026-10-20T03:15:00+08:00", "sample_count": 4, "out_of_range_samples": 4}]
+  segment_count: 1
+
+steps（判定步骤链，每步产物按分码独立存放）：
+  seq step_name           state       attempt  duration_ms payload_kind
+  1   fetch_series        succeeded   1        0           series
+  2   extract_window      succeeded   1        0           window
+  3   attribute           succeeded   1        2           attribution
+  4   draft               succeeded   1        0           exception_record
+  5   await_confirmation  succeeded   1        0           confirmation_ready
+
+products.attribution（归因结论）：
+  cause_code: "door_open"
+  cause_label: "开门"
+  confidence: 0.86
+  evidence: {"feature": "device_event:door_open", "value": 2, "threshold": 1, "note": "窗口内上报 开门 事件的采样条数"}
+  evidence: {"feature": "peak_temperature_c", "value": 12.4, "threshold": 8, "note": "窗口内峰值温度"}
+
+products.exception_record（成稿记录表结构化载荷，摘要）：
+  point_id: "point-vax-freezer-01"
+  device_name: "疫苗冷藏库温度记录仪"
+  excursion_started_at: "2026-10-20T03:10:00+08:00"
+  excursion_ended_at: "2026-10-20T03:25:00+08:00"
+  peak_temperature_c: 12.4
+  duration_minutes: 15
+  zone: "2~8℃"
+  cause_conclusion: "door_open"
+  needs_review: true
+  missing_fields: ["disposition"]
+
+products.confirmation_ready（等待主管确认）：
+  run_id: "run_e98c6e6acdf356edeb4659f7d59ca30b"
+  point_id: "point-vax-freezer-01"
+  external_ref: "cc-point-vax-freezer-01-20261019T191000Z"
+  idempotency_key: "54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae"
+  awaiting_role: "supervisor"
+  outstanding_fields: ["disposition"]
+  ready_at: "2026-10-26T15:49:00.204798+08:00"
+
+（stderr 摘要行）
+  {"event":"run_step_chain_started","level":"info","point_id":"point-vax-freezer-01","run_id":"run_e98c6e6acdf356edeb4659f7d59ca30b","start_seq":1,"step_count":5,"ts":"2026-10-26T07:49:00.199922Z"}
+  {"attempt":1,"event":"run_step_started","level":"info","run_id":"run_e98c6e6acdf356edeb4659f7d59ca30b","seq":1,"step_name":"fetch_series","ts":"2026-10-26T07:49:00.200242Z"}
+  {"attempt":1,"event":"run_step_started","level":"info","run_id":"run_e98c6e6acdf356edeb4659f7d59ca30b","seq":2,"step_name":"extract_window","ts":"2026-10-26T07:49:00.200838Z"}
+  {"attempt":1,"event":"run_step_started","level":"info","run_id":"run_e98c6e6acdf356edeb4659f7d59ca30b","seq":3,"step_name":"attribute","ts":"2026-10-26T07:49:00.201134Z"}
+  {"completion_tokens":128,"event":"model_call_completed","finish_reason":"stop","latency_ms":1,"level":"info","model":"coldchain-attribution-stub","prompt_tokens":512,"run_id":"run_e98c6e6acdf356edeb4659f7d59ca30b","schema":"attribution","step_name":"attribute","total_tokens":640,"ts":"2026-10-26T07:49:00.202787Z"}
+  {"attempt":1,"event":"run_step_started","level":"info","run_id":"run_e98c6e6acdf356edeb4659f7d59ca30b","seq":4,"step_name":"draft","ts":"2026-10-26T07:49:00.203768Z"}
+  {"event":"ledger_read_completed","latency_ms":0,"level":"info","path":"/api/v1/batches","status":200,"ts":"2026-10-26T07:49:00.204338Z"}
+  {"attempt":1,"event":"run_step_started","level":"info","run_id":"run_e98c6e6acdf356edeb4659f7d59ca30b","seq":5,"step_name":"await_confirmation","ts":"2026-10-26T07:49:00.204791Z"}
+  {"event":"run_step_chain_succeeded","level":"info","run_id":"run_e98c6e6acdf356edeb4659f7d59ca30b","step_count":5,"ts":"2026-10-26T07:49:00.205021Z"}
+  判定步骤链完成（run run_e98c6e6acdf356edeb4659f7d59ca30b）：5 步全部通过，结论停在「待药学部主管确认」，未触发出站写回
+

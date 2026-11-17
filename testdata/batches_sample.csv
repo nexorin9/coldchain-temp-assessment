@@ -1,0 +1,5 @@
+point_id,batch_ref,product_name,quantity,expiry_date
+point-vax-freezer-01,<EXAMPLE_LOT-01>,疫苗（脱敏样例）,120,<EXAMPLE_EXPIRY-A>
+point-vax-freezer-01,<EXAMPLE_LOT-02>,疫苗（脱敏样例）,60,<EXAMPLE_EXPIRY-B>
+point-vax-freezer-01,<EXAMPLE_LOT-03>,疫苗（脱敏样例）,48,<EXAMPLE_EXPIRY-C>
+point-vax-freezer-01,<EXAMPLE_LOT-04>,疫苗（脱敏样例）,96,<EXAMPLE_EXPIRY-D>

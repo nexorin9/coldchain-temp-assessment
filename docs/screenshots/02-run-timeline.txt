@@ -1,0 +1,68 @@
+# ② GET /v1/runs/{id} 与 GET /v1/runs/{id}/timeline 的真实响应（凭据已脱敏）
+# 采集时间：2026-10-26 15:49:00 +0800
+
+$ curl -sS -H 'Authorization: Bearer <经办凭据>' http://127.0.0.1:18100/v1/runs/run_e98c6e6acdf356edeb4659f7d59ca30b
+（真实响应原文字段；steps 的 payload 明细已省略，完整响应见同目录 02-run-timeline.txt 的原始采集）
+
+run：
+  run_id: "run_e98c6e6acdf356edeb4659f7d59ca30b"
+  point_id: "point-vax-freezer-01"
+  state: "awaiting_confirmation"
+  exec_state: "succeeded"
+  window_start: "2026-10-19T19:10:00Z"
+  window_end: "2026-10-19T19:25:00Z"
+  external_ref: "cc-point-vax-freezer-01-20261019T191000Z"
+  idempotency_key: "54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae"
+  created_at: "2026-10-26T07:49:00Z"
+  updated_at: "2026-10-26T07:49:00Z"
+  zone: "2~8℃"
+  profile_present: true
+  degraded: false
+
+window：
+  window_start: "2026-10-19T19:10:00Z"
+  window_end: "2026-10-19T19:25:00Z"
+  peak_temperature_c: 12.4
+  duration_minutes: 15
+  sample_count: 4
+  zone: "2~8℃"
+  zone_source: "point_profile"
+  peak_at: "2026-10-20T03:15:00+08:00"
+
+steps：
+  seq=1 fetch_series state=succeeded attempt=1 duration_ms=0 payload_kind=series
+  seq=2 extract_window state=succeeded attempt=1 duration_ms=0 payload_kind=window
+  seq=3 attribute state=succeeded attempt=1 duration_ms=2 payload_kind=attribution
+  seq=4 draft state=succeeded attempt=1 duration_ms=0 payload_kind=exception_record
+  seq=5 await_confirmation state=succeeded attempt=1 duration_ms=0 payload_kind=confirmation_ready
+
+step_count: 5
+current_step: {"seq": 5, "step_name": "await_confirmation", "state": "succeeded", "attempt": 1, "started_at": "2026-10-26T07:49:00.204791Z", "duration_ms": 0}
+recent_errors: []
+
+products.attribution：
+  cause_code: "door_open"
+  cause_label: "开门"
+  confidence: 0.86
+  evidence: {"feature": "device_event:door_open", "value": 2, "threshold": 1, "note": "窗口内上报 开门 事件的采样条数"}
+  evidence: {"feature": "peak_temperature_c", "value": 12.4, "threshold": 8, "note": "窗口内峰值温度"}
+
+$ curl -sS -H 'Authorization: Bearer <质控只读凭据>' http://127.0.0.1:18100/v1/runs/run_e98c6e6acdf356edeb4659f7d59ca30b/timeline
+（真实响应原文字段；entries 不含 payload，这里按原样列出）
+
+run_id: "run_e98c6e6acdf356edeb4659f7d59ca30b"
+run_started_at: "2026-10-26T07:49:00Z"
+run_ended_at: "2026-10-26T07:49:00Z"
+total_duration_ms: 4
+step_count: 5
+current_step: {"seq": 5, "step_name": "await_confirmation", "state": "succeeded", "attempt": 1, "started_at": "2026-10-26T07:49:00.204791Z", "duration_ms": 0}
+recent_errors: []
+
+entries（每步的起止、耗时与在时间线上的位置）：
+  seq  step_name           state       attempt  duration_ms offset_ms   start_pct  width_pct
+  1    fetch_series        succeeded   1        0           0           0          0.59
+  2    extract_window      succeeded   1        0           0           13.08      0.33
+  3    attribute           succeeded   1        2           0           19.58      53.49
+  4    draft               succeeded   1        0           3           77.39      14.64
+  5    await_confirmation  succeeded   1        0           4           99.85      0.15
+

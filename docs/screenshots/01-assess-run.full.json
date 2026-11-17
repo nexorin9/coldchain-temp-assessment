@@ -1,0 +1,1344 @@
+{
+  "run": {
+    "run_id": "run_e98c6e6acdf356edeb4659f7d59ca30b",
+    "point_id": "point-vax-freezer-01",
+    "window_start": "2026-10-20T03:10:00+08:00",
+    "window_end": "2026-10-20T03:25:00+08:00",
+    "state": "awaiting_confirmation",
+    "external_ref": "cc-point-vax-freezer-01-20261019T191000Z",
+    "idempotency_key": "54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae",
+    "exec_state": "succeeded",
+    "state_trail": [
+      {
+        "from": "detected",
+        "to": "assessed",
+        "action": "auto",
+        "reason": "excursion_window_extracted",
+        "note": "越温窗口已抽出，给出可核对的判定结论",
+        "actor": "system",
+        "at": "2026-10-26T15:49:00.198431+08:00"
+      },
+      {
+        "from": "assessed",
+        "to": "awaiting_confirmation",
+        "action": "auto",
+        "reason": "draft_ready_for_confirmation",
+        "note": "异常记录表已成稿，结论停在待药学部主管确认，未触发出站写回",
+        "actor": "system",
+        "at": "2026-10-26T15:49:00.204863+08:00"
+      }
+    ]
+  },
+  "window": {
+    "start": "2026-10-20T03:10:00+08:00",
+    "end": "2026-10-20T03:25:00+08:00",
+    "duration_minutes": 15,
+    "peak_c": 12.4,
+    "peak_at": "2026-10-20T03:15:00+08:00",
+    "zone": "2~8℃",
+    "sample_count": 4,
+    "hysteresis_c": 1,
+    "merge_count": 0,
+    "out_of_range_samples": 4,
+    "min_excursion_minutes": 10,
+    "sampling_interval_sec": 300,
+    "interval_source": "point_profile",
+    "inferred_interval_sec": 300,
+    "rise_rate": {
+      "per_minute": 0.48000000000000004,
+      "minutes_to_peak": 15,
+      "peak_c": 12.4,
+      "valid_samples": 7,
+      "excluded_stuck_samples": 0,
+      "excluded_gap_minutes": 0,
+      "usable": true,
+      "note": "温升速率按连续观测段起点到峰值的平均速率折算；探头卡死段与数据缺口均已剔除"
+    },
+    "segments": [
+      {
+        "start": "2026-10-20T03:10:00+08:00",
+        "end": "2026-10-20T03:25:00+08:00",
+        "duration_minutes": 15,
+        "peak_c": 12.4,
+        "peak_at": "2026-10-20T03:15:00+08:00",
+        "sample_count": 4,
+        "out_of_range_samples": 4
+      }
+    ],
+    "segment_count": 1
+  },
+  "steps": [
+    {
+      "seq": 1,
+      "step_name": "fetch_series",
+      "state": "succeeded",
+      "attempt": 1,
+      "started_at": "2026-10-26T15:49:00.200242+08:00",
+      "ended_at": "2026-10-26T15:49:00.200269+08:00",
+      "duration_ms": 0,
+      "duration_us": 26,
+      "offset_ms": 0,
+      "offset_us": 0,
+      "end_offset_ms": 0,
+      "end_offset_us": 26,
+      "start_pct": 0,
+      "width_pct": 0.57,
+      "payload_kind": "series",
+      "payload": {
+        "kind": "series",
+        "payload": {
+          "point_id": "point-vax-freezer-01",
+          "from": "2026-10-20T03:00:00+08:00",
+          "to": "2026-10-20T03:30:00+08:00",
+          "sample_count": 7,
+          "samples": [
+            {
+              "point_id": "point-vax-freezer-01",
+              "device_id": "device-recorder-0001",
+              "device_name": "疫苗冷藏库温度记录仪",
+              "measured_at": "2026-10-20T03:00:00+08:00",
+              "measured_at_raw": "2026-10-20T03:00:00+08:00",
+              "temperature_c": 5.2,
+              "unit": "C",
+              "temperature_raw": 5.2,
+              "unit_raw": "C",
+              "humidity_pct": 58,
+              "battery_pct": 92,
+              "accuracy_c": 0.3,
+              "source": "recorder",
+              "precision": {
+                "limited": false,
+                "limit_c": 0.5,
+                "declared_c": 0.3
+              },
+              "data_notes": {
+                "encoding_fallback": false,
+                "truncated": false
+              }
+            },
+            {
+              "point_id": "point-vax-freezer-01",
+              "device_id": "device-recorder-0001",
+              "device_name": "疫苗冷藏库温度记录仪",
+              "measured_at": "2026-10-20T03:05:00+08:00",
+              "measured_at_raw": "2026-10-20T03:05:00+08:00",
+              "temperature_c": 5.6,
+              "unit": "C",
+              "temperature_raw": 5.6,
+              "unit_raw": "C",
+              "humidity_pct": 59.5,
+              "battery_pct": 92,
+              "accuracy_c": 0.3,
+              "source": "recorder",
+              "precision": {
+                "limited": false,
+                "limit_c": 0.5,
+                "declared_c": 0.3
+              },
+              "data_notes": {
+                "encoding_fallback": false,
+                "truncated": false
+              }
+            },
+            {
+              "point_id": "point-vax-freezer-01",
+              "device_id": "device-recorder-0001",
+              "device_name": "疫苗冷藏库温度记录仪",
+              "measured_at": "2026-10-20T03:10:00+08:00",
+              "measured_at_raw": "2026-10-20T03:10:00+08:00",
+              "temperature_c": 8.6,
+              "unit": "C",
+              "temperature_raw": 8.6,
+              "unit_raw": "C",
+              "humidity_pct": 61,
+              "battery_pct": 91,
+              "accuracy_c": 0.3,
+              "source": "recorder",
+              "events": [
+                "door_open"
+              ],
+              "precision": {
+                "limited": false,
+                "limit_c": 0.5,
+                "declared_c": 0.3
+              },
+              "data_notes": {
+                "encoding_fallback": false,
+                "truncated": false
+              }
+            },
+            {
+              "point_id": "point-vax-freezer-01",
+              "device_id": "device-recorder-0001",
+              "device_name": "疫苗冷藏库温度记录仪",
+              "measured_at": "2026-10-20T03:15:00+08:00",
+              "measured_at_raw": "2026-10-20T03:15:00+08:00",
+              "temperature_c": 12.4,
+              "unit": "C",
+              "temperature_raw": 12.4,
+              "unit_raw": "C",
+              "humidity_pct": 68.5,
+              "battery_pct": 91,
+              "accuracy_c": 0.3,
+              "source": "recorder",
+              "alarm_flag": true,
+              "events": [
+                "door_open"
+              ],
+              "precision": {
+                "limited": false,
+                "limit_c": 0.5,
+                "declared_c": 0.3
+              },
+              "data_notes": {
+                "encoding_fallback": false,
+                "truncated": false
+              }
+            },
+            {
+              "point_id": "point-vax-freezer-01",
+              "device_id": "device-recorder-0001",
+              "device_name": "疫苗冷藏库温度记录仪",
+              "measured_at": "2026-10-20T03:20:00+08:00",
+              "measured_at_raw": "2026-10-20T03:20:00+08:00",
+              "temperature_c": 9.8,
+              "unit": "C",
+              "temperature_raw": 9.8,
+              "unit_raw": "C",
+              "humidity_pct": 66,
+              "battery_pct": 91,
+              "accuracy_c": 0.3,
+              "source": "recorder",
+              "alarm_flag": true,
+              "precision": {
+                "limited": false,
+                "limit_c": 0.5,
+                "declared_c": 0.3
+              },
+              "data_notes": {
+                "encoding_fallback": false,
+                "truncated": false
+              }
+            },
+            {
+              "point_id": "point-vax-freezer-01",
+              "device_id": "device-recorder-0001",
+              "device_name": "疫苗冷藏库温度记录仪",
+              "measured_at": "2026-10-20T03:25:00+08:00",
+              "measured_at_raw": "2026-10-20T03:25:00+08:00",
+              "temperature_c": 8.7,
+              "unit": "C",
+              "temperature_raw": 8.7,
+              "unit_raw": "C",
+              "humidity_pct": 63.5,
+              "battery_pct": 90,
+              "accuracy_c": 0.3,
+              "source": "recorder",
+              "precision": {
+                "limited": false,
+                "limit_c": 0.5,
+                "declared_c": 0.3
+              },
+              "data_notes": {
+                "encoding_fallback": false,
+                "truncated": false
+              }
+            },
+            {
+              "point_id": "point-vax-freezer-01",
+              "device_id": "device-recorder-0001",
+              "device_name": "疫苗冷藏库温度记录仪",
+              "measured_at": "2026-10-20T03:30:00+08:00",
+              "measured_at_raw": "2026-10-20T03:30:00+08:00",
+              "temperature_c": 6.1,
+              "unit": "C",
+              "temperature_raw": 6.1,
+              "unit_raw": "C",
+              "humidity_pct": 61,
+              "battery_pct": 90,
+              "accuracy_c": 0.3,
+              "source": "recorder",
+              "precision": {
+                "limited": false,
+                "limit_c": 0.5,
+                "declared_c": 0.3
+              },
+              "data_notes": {
+                "encoding_fallback": false,
+                "truncated": false
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "seq": 2,
+      "step_name": "extract_window",
+      "state": "succeeded",
+      "attempt": 1,
+      "started_at": "2026-10-26T15:49:00.200838+08:00",
+      "ended_at": "2026-10-26T15:49:00.200853+08:00",
+      "duration_ms": 0,
+      "duration_us": 14,
+      "offset_ms": 0,
+      "offset_us": 595,
+      "end_offset_ms": 0,
+      "end_offset_us": 609,
+      "start_pct": 13.07,
+      "width_pct": 0.31,
+      "payload_kind": "window",
+      "payload": {
+        "kind": "window",
+        "payload": {
+          "window": {
+            "start": "2026-10-20T03:10:00+08:00",
+            "end": "2026-10-20T03:25:00+08:00",
+            "duration_minutes": 15,
+            "peak_c": 12.4,
+            "peak_at": "2026-10-20T03:15:00+08:00",
+            "zone": "2~8℃",
+            "sample_count": 4,
+            "hysteresis_c": 1,
+            "merge_count": 0,
+            "out_of_range_samples": 4,
+            "min_excursion_minutes": 10,
+            "sampling_interval_sec": 300,
+            "interval_source": "point_profile",
+            "inferred_interval_sec": 300,
+            "rise_rate": {
+              "per_minute": 0.48000000000000004,
+              "minutes_to_peak": 15,
+              "peak_c": 12.4,
+              "valid_samples": 7,
+              "excluded_stuck_samples": 0,
+              "excluded_gap_minutes": 0,
+              "usable": true,
+              "note": "温升速率按连续观测段起点到峰值的平均速率折算；探头卡死段与数据缺口均已剔除"
+            },
+            "segments": [
+              {
+                "start": "2026-10-20T03:10:00+08:00",
+                "end": "2026-10-20T03:25:00+08:00",
+                "duration_minutes": 15,
+                "peak_c": 12.4,
+                "peak_at": "2026-10-20T03:15:00+08:00",
+                "sample_count": 4,
+                "out_of_range_samples": 4
+              }
+            ],
+            "segment_count": 1
+          },
+          "zone_min_c": 2,
+          "zone_max_c": 8,
+          "zone_source": "point_profile",
+          "zone_basis": "点位温区配置 point_id=point-vax-freezer-01 的 zone_min_c/zone_max_c",
+          "products": [
+            {
+              "product_name": "疫苗（脱敏样例）",
+              "zone_min_c": 2,
+              "zone_max_c": 8,
+              "zone_label": "2~8℃",
+              "zone_source": "product_manual",
+              "zone_basis": "点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处）",
+              "out_of_range": false
+            }
+          ],
+          "precision": {
+            "limited": false,
+            "limit_c": 0.5,
+            "limit_source": "point_profile",
+            "declared_c": 0.3
+          },
+          "binding": {
+            "status": "point_only",
+            "point_id": "point-vax-freezer-01",
+            "device_id": "device-recorder-0001",
+            "reason": "点位 point-vax-freezer-01 未登记设备清单，读数设备 \"device-recorder-0001\" 的归属未核验"
+          }
+        }
+      }
+    },
+    {
+      "seq": 3,
+      "step_name": "attribute",
+      "state": "succeeded",
+      "attempt": 1,
+      "started_at": "2026-10-26T15:49:00.201134+08:00",
+      "ended_at": "2026-10-26T15:49:00.203571+08:00",
+      "duration_ms": 2,
+      "duration_us": 2437,
+      "offset_ms": 0,
+      "offset_us": 891,
+      "end_offset_ms": 3,
+      "end_offset_us": 3328,
+      "start_pct": 19.57,
+      "width_pct": 53.51,
+      "payload_kind": "attribution",
+      "payload": {
+        "kind": "attribution",
+        "payload": {
+          "cause_code": "door_open",
+          "cause_label": "开门",
+          "confidence": 0.86,
+          "candidates": [
+            {
+              "cause_code": "door_open",
+              "label": "开门",
+              "confidence": 0.86,
+              "evidence": [
+                {
+                  "feature": "device_event:door_open",
+                  "value": 2,
+                  "threshold": 1,
+                  "note": "窗口内上报 开门 事件的采样条数"
+                },
+                {
+                  "feature": "peak_temperature_c",
+                  "value": 12.4,
+                  "threshold": 8,
+                  "note": "窗口内峰值温度"
+                }
+              ],
+              "note": "证据来自记录仪上报的设备事件与窗口峰值，需药学部主管复核"
+            }
+          ],
+          "evidence": [
+            {
+              "feature": "device_event:door_open",
+              "value": 2,
+              "threshold": 1,
+              "note": "窗口内上报 开门 事件的采样条数"
+            },
+            {
+              "feature": "peak_temperature_c",
+              "value": 12.4,
+              "threshold": 8,
+              "note": "窗口内峰值温度"
+            }
+          ],
+          "notes": [
+            "结论按记录仪上报的设备事件与越限窗口给出，处置仍需药学部主管确认"
+          ]
+        }
+      }
+    },
+    {
+      "seq": 4,
+      "step_name": "draft",
+      "state": "succeeded",
+      "attempt": 1,
+      "started_at": "2026-10-26T15:49:00.203768+08:00",
+      "ended_at": "2026-10-26T15:49:00.204435+08:00",
+      "duration_ms": 0,
+      "duration_us": 666,
+      "offset_ms": 3,
+      "offset_us": 3525,
+      "end_offset_ms": 4,
+      "end_offset_us": 4191,
+      "start_pct": 77.4,
+      "width_pct": 14.62,
+      "payload_kind": "exception_record",
+      "payload": {
+        "kind": "exception_record",
+        "payload": {
+          "point_id": "point-vax-freezer-01",
+          "device_name": "疫苗冷藏库温度记录仪",
+          "excursion_started_at": "2026-10-20T03:10:00+08:00",
+          "excursion_ended_at": "2026-10-20T03:25:00+08:00",
+          "peak_temperature_c": 12.4,
+          "duration_minutes": 15,
+          "zone": "2~8℃",
+          "batches": [
+            {
+              "point_id": "point-vax-freezer-01",
+              "batch_ref": "\u003cEXAMPLE_LOT-01\u003e",
+              "product_name": "疫苗（脱敏样例）",
+              "quantity": 120,
+              "expiry_date": "\u003cEXAMPLE_EXPIRY-A\u003e"
+            },
+            {
+              "point_id": "point-vax-freezer-01",
+              "batch_ref": "\u003cEXAMPLE_LOT-02\u003e",
+              "product_name": "疫苗（脱敏样例）",
+              "quantity": 60,
+              "expiry_date": "\u003cEXAMPLE_EXPIRY-B\u003e"
+            },
+            {
+              "point_id": "point-vax-freezer-01",
+              "batch_ref": "\u003cEXAMPLE_LOT-03\u003e",
+              "product_name": "疫苗（脱敏样例）",
+              "quantity": 48,
+              "expiry_date": "\u003cEXAMPLE_EXPIRY-C\u003e"
+            },
+            {
+              "point_id": "point-vax-freezer-01",
+              "batch_ref": "\u003cEXAMPLE_LOT-04\u003e",
+              "product_name": "疫苗（脱敏样例）",
+              "quantity": 96,
+              "expiry_date": "\u003cEXAMPLE_EXPIRY-D\u003e"
+            }
+          ],
+          "batch_lookup": {
+            "status": "ok",
+            "batches": [
+              {
+                "point_id": "point-vax-freezer-01",
+                "batch_ref": "\u003cEXAMPLE_LOT-01\u003e",
+                "product_name": "疫苗（脱敏样例）",
+                "quantity": 120,
+                "expiry_date": "\u003cEXAMPLE_EXPIRY-A\u003e"
+              },
+              {
+                "point_id": "point-vax-freezer-01",
+                "batch_ref": "\u003cEXAMPLE_LOT-02\u003e",
+                "product_name": "疫苗（脱敏样例）",
+                "quantity": 60,
+                "expiry_date": "\u003cEXAMPLE_EXPIRY-B\u003e"
+              },
+              {
+                "point_id": "point-vax-freezer-01",
+                "batch_ref": "\u003cEXAMPLE_LOT-03\u003e",
+                "product_name": "疫苗（脱敏样例）",
+                "quantity": 48,
+                "expiry_date": "\u003cEXAMPLE_EXPIRY-C\u003e"
+              },
+              {
+                "point_id": "point-vax-freezer-01",
+                "batch_ref": "\u003cEXAMPLE_LOT-04\u003e",
+                "product_name": "疫苗（脱敏样例）",
+                "quantity": 96,
+                "expiry_date": "\u003cEXAMPLE_EXPIRY-D\u003e"
+              }
+            ],
+            "source": "cold_chain_ledger",
+            "checked_at": "2026-10-20T03:10:00+08:00"
+          },
+          "cause_conclusion": "door_open",
+          "evidence": [
+            {
+              "feature": "device_event:door_open",
+              "value": 2,
+              "threshold": 1,
+              "note": "窗口内上报 开门 事件的采样条数"
+            },
+            {
+              "feature": "peak_temperature_c",
+              "value": 12.4,
+              "threshold": 8,
+              "note": "窗口内峰值温度"
+            }
+          ],
+          "disposition": "isolate",
+          "disposition_note": "本次越温涉及 4 个在库批次，其中 4 个越出各自制品温区，建议先隔离并送疫苗生产企业评估质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认，系统不给出放行结论。",
+          "advice": {
+            "disposition": "isolate",
+            "note": "本次越温涉及 4 个在库批次，其中 4 个越出各自制品温区，建议先隔离并送疫苗生产企业评估质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认，系统不给出放行结论。",
+            "rationale": "越温窗口 2026-10-20 03:10（+08:00） ~ 2026-10-20 03:25（+08:00），峰值 12.4 ℃，持续 15 分钟；原因结论：开门（door_open）；归因证据 2 条",
+            "batch_advices": [
+              {
+                "batch_ref": "\u003cEXAMPLE_LOT-01\u003e",
+                "product_name": "疫苗（脱敏样例）",
+                "quantity": 120,
+                "expiry_date": "\u003cEXAMPLE_EXPIRY-A\u003e",
+                "zone": "2~8℃",
+                "zone_basis": "点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处）",
+                "exposure_minutes": 15,
+                "deviation_c": 4.4,
+                "exposed": true,
+                "affected": true,
+                "disposition": "isolate",
+                "advice_text": "建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-01\u003e，制品 疫苗（脱敏样例），数量 120），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定",
+                "rationale": "本次越温峰值 12.4 ℃ 越出该批次温区 2~8℃（超出 4.4 ℃），该批次在窗口内暴露 15 分钟；原因结论：开门（door_open）",
+                "evidence": [
+                  {
+                    "feature": "device_event:door_open",
+                    "value": 2,
+                    "threshold": 1,
+                    "note": "窗口内上报 开门 事件的采样条数"
+                  },
+                  {
+                    "feature": "peak_temperature_c",
+                    "value": 12.4,
+                    "threshold": 8,
+                    "note": "窗口内峰值温度"
+                  },
+                  {
+                    "feature": "peak_deviation_from_batch_zone_c",
+                    "value": 4.4,
+                    "threshold": 0,
+                    "note": "峰值相对该批次温区 2~8℃ 的偏离（℃）"
+                  },
+                  {
+                    "feature": "excursion_exposure_minutes",
+                    "value": 15,
+                    "threshold": 0,
+                    "note": "该批次在本次越温窗口内的暴露时长（分钟）"
+                  }
+                ]
+              },
+              {
+                "batch_ref": "\u003cEXAMPLE_LOT-02\u003e",
+                "product_name": "疫苗（脱敏样例）",
+                "quantity": 60,
+                "expiry_date": "\u003cEXAMPLE_EXPIRY-B\u003e",
+                "zone": "2~8℃",
+                "zone_basis": "点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处）",
+                "exposure_minutes": 15,
+                "deviation_c": 4.4,
+                "exposed": true,
+                "affected": true,
+                "disposition": "isolate",
+                "advice_text": "建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-02\u003e，制品 疫苗（脱敏样例），数量 60），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定",
+                "rationale": "本次越温峰值 12.4 ℃ 越出该批次温区 2~8℃（超出 4.4 ℃），该批次在窗口内暴露 15 分钟；原因结论：开门（door_open）",
+                "evidence": [
+                  {
+                    "feature": "device_event:door_open",
+                    "value": 2,
+                    "threshold": 1,
+                    "note": "窗口内上报 开门 事件的采样条数"
+                  },
+                  {
+                    "feature": "peak_temperature_c",
+                    "value": 12.4,
+                    "threshold": 8,
+                    "note": "窗口内峰值温度"
+                  },
+                  {
+                    "feature": "peak_deviation_from_batch_zone_c",
+                    "value": 4.4,
+                    "threshold": 0,
+                    "note": "峰值相对该批次温区 2~8℃ 的偏离（℃）"
+                  },
+                  {
+                    "feature": "excursion_exposure_minutes",
+                    "value": 15,
+                    "threshold": 0,
+                    "note": "该批次在本次越温窗口内的暴露时长（分钟）"
+                  }
+                ]
+              },
+              {
+                "batch_ref": "\u003cEXAMPLE_LOT-03\u003e",
+                "product_name": "疫苗（脱敏样例）",
+                "quantity": 48,
+                "expiry_date": "\u003cEXAMPLE_EXPIRY-C\u003e",
+                "zone": "2~8℃",
+                "zone_basis": "点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处）",
+                "exposure_minutes": 15,
+                "deviation_c": 4.4,
+                "exposed": true,
+                "affected": true,
+                "disposition": "isolate",
+                "advice_text": "建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-03\u003e，制品 疫苗（脱敏样例），数量 48），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定",
+                "rationale": "本次越温峰值 12.4 ℃ 越出该批次温区 2~8℃（超出 4.4 ℃），该批次在窗口内暴露 15 分钟；原因结论：开门（door_open）",
+                "evidence": [
+                  {
+                    "feature": "device_event:door_open",
+                    "value": 2,
+                    "threshold": 1,
+                    "note": "窗口内上报 开门 事件的采样条数"
+                  },
+                  {
+                    "feature": "peak_temperature_c",
+                    "value": 12.4,
+                    "threshold": 8,
+                    "note": "窗口内峰值温度"
+                  },
+                  {
+                    "feature": "peak_deviation_from_batch_zone_c",
+                    "value": 4.4,
+                    "threshold": 0,
+                    "note": "峰值相对该批次温区 2~8℃ 的偏离（℃）"
+                  },
+                  {
+                    "feature": "excursion_exposure_minutes",
+                    "value": 15,
+                    "threshold": 0,
+                    "note": "该批次在本次越温窗口内的暴露时长（分钟）"
+                  }
+                ]
+              },
+              {
+                "batch_ref": "\u003cEXAMPLE_LOT-04\u003e",
+                "product_name": "疫苗（脱敏样例）",
+                "quantity": 96,
+                "expiry_date": "\u003cEXAMPLE_EXPIRY-D\u003e",
+                "zone": "2~8℃",
+                "zone_basis": "点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处）",
+                "exposure_minutes": 15,
+                "deviation_c": 4.4,
+                "exposed": true,
+                "affected": true,
+                "disposition": "isolate",
+                "advice_text": "建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-04\u003e，制品 疫苗（脱敏样例），数量 96），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定",
+                "rationale": "本次越温峰值 12.4 ℃ 越出该批次温区 2~8℃（超出 4.4 ℃），该批次在窗口内暴露 15 分钟；原因结论：开门（door_open）",
+                "evidence": [
+                  {
+                    "feature": "device_event:door_open",
+                    "value": 2,
+                    "threshold": 1,
+                    "note": "窗口内上报 开门 事件的采样条数"
+                  },
+                  {
+                    "feature": "peak_temperature_c",
+                    "value": 12.4,
+                    "threshold": 8,
+                    "note": "窗口内峰值温度"
+                  },
+                  {
+                    "feature": "peak_deviation_from_batch_zone_c",
+                    "value": 4.4,
+                    "threshold": 0,
+                    "note": "峰值相对该批次温区 2~8℃ 的偏离（℃）"
+                  },
+                  {
+                    "feature": "excursion_exposure_minutes",
+                    "value": 15,
+                    "threshold": 0,
+                    "note": "该批次在本次越温窗口内的暴露时长（分钟）"
+                  }
+                ]
+              }
+            ]
+          },
+          "needs_review": true,
+          "missing_fields": [
+            "disposition"
+          ],
+          "quality": {
+            "complete": false,
+            "qualified": true,
+            "missing_fields": [
+              "disposition"
+            ],
+            "pending_fields": [
+              "disposition"
+            ],
+            "checked_at": "2026-10-26T15:49:00.204413+08:00"
+          },
+          "draft_text": "疫苗储存和运输温度异常情况记录表（草稿）\n==============================================\n    待补要素：本表要素未齐备，待补：处置建议（须经药学部主管复核补齐；这几项补齐前不影响本表记入冷链台账）\n用途声明：本表由冷链温控判定系统自动生成，属草稿；须经药学部主管复核并提交疫苗生产企业评估质量影响后，再由药学部主管确认处置。本表不构成批次放行结论。\n\n一、监测点位与设备\n    点位编号：point-vax-freezer-01\n    设备名称：疫苗冷藏库温度记录仪\n    记录仪标识：device-recorder-0001\n\n二、温度异常情况\n    越限起始时间：2026-10-20 03:10（+08:00）\n    越限结束时间：2026-10-20 03:25（+08:00）\n    越限持续时长：15 分钟\n    峰值温度：12.4 ℃\n    峰值出现时刻：2026-10-20 03:15（+08:00）\n    所属温区：2~8℃\n    温区来源：点位温区配置（依据：点位温区配置 point_id=point-vax-freezer-01 的 zone_min_c/zone_max_c）\n\n三、原因结论与判定依据\n    原因结论：开门（door_open）\n    判定置信度：0.86\n    证据摘要：\n      1) device_event:door_open = 2（阈值 1）—— 窗口内上报 开门 事件的采样条数\n      2) peak_temperature_c = 12.4（阈值 8）—— 窗口内峰值温度\n\n四、涉及批次\n    涉及批次 1：批次号 \u003cEXAMPLE_LOT-01\u003e｜品名 疫苗（脱敏样例）｜数量 120｜有效期 \u003cEXAMPLE_EXPIRY-A\u003e\n      该批次温区：2~8℃（依据：点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处））\n      暴露时长：15 分钟；峰值相对该批次温区偏离 4.4 ℃（已越出该批次温区）\n      批次可用性建议：隔离（isolate）——建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-01\u003e，制品 疫苗（脱敏样例），数量 120），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定\n    涉及批次 2：批次号 \u003cEXAMPLE_LOT-02\u003e｜品名 疫苗（脱敏样例）｜数量 60｜有效期 \u003cEXAMPLE_EXPIRY-B\u003e\n      该批次温区：2~8℃（依据：点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处））\n      暴露时长：15 分钟；峰值相对该批次温区偏离 4.4 ℃（已越出该批次温区）\n      批次可用性建议：隔离（isolate）——建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-02\u003e，制品 疫苗（脱敏样例），数量 60），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定\n    涉及批次 3：批次号 \u003cEXAMPLE_LOT-03\u003e｜品名 疫苗（脱敏样例）｜数量 48｜有效期 \u003cEXAMPLE_EXPIRY-C\u003e\n      该批次温区：2~8℃（依据：点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处））\n      暴露时长：15 分钟；峰值相对该批次温区偏离 4.4 ℃（已越出该批次温区）\n      批次可用性建议：隔离（isolate）——建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-03\u003e，制品 疫苗（脱敏样例），数量 48），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定\n    涉及批次 4：批次号 \u003cEXAMPLE_LOT-04\u003e｜品名 疫苗（脱敏样例）｜数量 96｜有效期 \u003cEXAMPLE_EXPIRY-D\u003e\n      该批次温区：2~8℃（依据：点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处））\n      暴露时长：15 分钟；峰值相对该批次温区偏离 4.4 ℃（已越出该批次温区）\n      批次可用性建议：隔离（isolate）——建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-04\u003e，制品 疫苗（脱敏样例），数量 96），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定\n\n五、处置建议\n    处置建议：隔离（isolate）（最终处置待药学部主管确认后确定）\n    处置说明：本次越温涉及 4 个在库批次，其中 4 个越出各自制品温区，建议先隔离并送疫苗生产企业评估质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认，系统不给出放行结论。\n\n六、数据来源与生成时间\n    数据来源：记录仪上报\n    采样条数：7 条\n    取数区间：2026-10-20 03:00（+08:00） ~ 2026-10-20 03:30（+08:00）\n    采样周期口径：300 秒（来源：点位温区配置的标称值）\n    生成时间：2026-10-26 15:49（+08:00）\n    生成方式：系统自动成稿（草稿，未经人工复核）\n\n七、人工复核（须由药学部主管填写）\n    复核人（药学部主管）：____________________\n    复核日期：____________________\n    复核结论（同意 / 退回补充 / 另附说明）：____________________\n    送疫苗生产企业评估（企业名称 / 受理日期）：____________________\n\n    本表为系统生成的草稿，须经药学部主管复核并提交疫苗生产企业评估。",
+          "generated_at": "2026-10-26T15:49:00.203776+08:00"
+        }
+      }
+    },
+    {
+      "seq": 5,
+      "step_name": "await_confirmation",
+      "state": "succeeded",
+      "attempt": 1,
+      "started_at": "2026-10-26T15:49:00.204791+08:00",
+      "ended_at": "2026-10-26T15:49:00.204798+08:00",
+      "duration_ms": 0,
+      "duration_us": 6,
+      "offset_ms": 4,
+      "offset_us": 4548,
+      "end_offset_ms": 4,
+      "end_offset_us": 4554,
+      "start_pct": 99.87,
+      "width_pct": 0.13,
+      "payload_kind": "confirmation_ready",
+      "payload": {
+        "kind": "confirmation_ready",
+        "payload": {
+          "run_id": "run_e98c6e6acdf356edeb4659f7d59ca30b",
+          "point_id": "point-vax-freezer-01",
+          "external_ref": "cc-point-vax-freezer-01-20261019T191000Z",
+          "idempotency_key": "54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae",
+          "awaiting_role": "supervisor",
+          "outstanding_fields": [
+            "disposition"
+          ],
+          "ready_at": "2026-10-26T15:49:00.204798+08:00"
+        }
+      }
+    }
+  ],
+  "products": {
+    "attribution": {
+      "cause_code": "door_open",
+      "cause_label": "开门",
+      "confidence": 0.86,
+      "candidates": [
+        {
+          "cause_code": "door_open",
+          "label": "开门",
+          "confidence": 0.86,
+          "evidence": [
+            {
+              "feature": "device_event:door_open",
+              "value": 2,
+              "threshold": 1,
+              "note": "窗口内上报 开门 事件的采样条数"
+            },
+            {
+              "feature": "peak_temperature_c",
+              "value": 12.4,
+              "threshold": 8,
+              "note": "窗口内峰值温度"
+            }
+          ],
+          "note": "证据来自记录仪上报的设备事件与窗口峰值，需药学部主管复核"
+        }
+      ],
+      "evidence": [
+        {
+          "feature": "device_event:door_open",
+          "value": 2,
+          "threshold": 1,
+          "note": "窗口内上报 开门 事件的采样条数"
+        },
+        {
+          "feature": "peak_temperature_c",
+          "value": 12.4,
+          "threshold": 8,
+          "note": "窗口内峰值温度"
+        }
+      ],
+      "notes": [
+        "结论按记录仪上报的设备事件与越限窗口给出，处置仍需药学部主管确认"
+      ]
+    },
+    "confirmation_ready": {
+      "run_id": "run_e98c6e6acdf356edeb4659f7d59ca30b",
+      "point_id": "point-vax-freezer-01",
+      "external_ref": "cc-point-vax-freezer-01-20261019T191000Z",
+      "idempotency_key": "54b35c7f136371619ea6a5313714d1ac3d4173e3f835bcc97eb1087e6f7dddae",
+      "awaiting_role": "supervisor",
+      "outstanding_fields": [
+        "disposition"
+      ],
+      "ready_at": "2026-10-26T15:49:00.204798+08:00"
+    },
+    "exception_record": {
+      "point_id": "point-vax-freezer-01",
+      "device_name": "疫苗冷藏库温度记录仪",
+      "excursion_started_at": "2026-10-20T03:10:00+08:00",
+      "excursion_ended_at": "2026-10-20T03:25:00+08:00",
+      "peak_temperature_c": 12.4,
+      "duration_minutes": 15,
+      "zone": "2~8℃",
+      "batches": [
+        {
+          "point_id": "point-vax-freezer-01",
+          "batch_ref": "\u003cEXAMPLE_LOT-01\u003e",
+          "product_name": "疫苗（脱敏样例）",
+          "quantity": 120,
+          "expiry_date": "\u003cEXAMPLE_EXPIRY-A\u003e"
+        },
+        {
+          "point_id": "point-vax-freezer-01",
+          "batch_ref": "\u003cEXAMPLE_LOT-02\u003e",
+          "product_name": "疫苗（脱敏样例）",
+          "quantity": 60,
+          "expiry_date": "\u003cEXAMPLE_EXPIRY-B\u003e"
+        },
+        {
+          "point_id": "point-vax-freezer-01",
+          "batch_ref": "\u003cEXAMPLE_LOT-03\u003e",
+          "product_name": "疫苗（脱敏样例）",
+          "quantity": 48,
+          "expiry_date": "\u003cEXAMPLE_EXPIRY-C\u003e"
+        },
+        {
+          "point_id": "point-vax-freezer-01",
+          "batch_ref": "\u003cEXAMPLE_LOT-04\u003e",
+          "product_name": "疫苗（脱敏样例）",
+          "quantity": 96,
+          "expiry_date": "\u003cEXAMPLE_EXPIRY-D\u003e"
+        }
+      ],
+      "batch_lookup": {
+        "status": "ok",
+        "batches": [
+          {
+            "point_id": "point-vax-freezer-01",
+            "batch_ref": "\u003cEXAMPLE_LOT-01\u003e",
+            "product_name": "疫苗（脱敏样例）",
+            "quantity": 120,
+            "expiry_date": "\u003cEXAMPLE_EXPIRY-A\u003e"
+          },
+          {
+            "point_id": "point-vax-freezer-01",
+            "batch_ref": "\u003cEXAMPLE_LOT-02\u003e",
+            "product_name": "疫苗（脱敏样例）",
+            "quantity": 60,
+            "expiry_date": "\u003cEXAMPLE_EXPIRY-B\u003e"
+          },
+          {
+            "point_id": "point-vax-freezer-01",
+            "batch_ref": "\u003cEXAMPLE_LOT-03\u003e",
+            "product_name": "疫苗（脱敏样例）",
+            "quantity": 48,
+            "expiry_date": "\u003cEXAMPLE_EXPIRY-C\u003e"
+          },
+          {
+            "point_id": "point-vax-freezer-01",
+            "batch_ref": "\u003cEXAMPLE_LOT-04\u003e",
+            "product_name": "疫苗（脱敏样例）",
+            "quantity": 96,
+            "expiry_date": "\u003cEXAMPLE_EXPIRY-D\u003e"
+          }
+        ],
+        "source": "cold_chain_ledger",
+        "checked_at": "2026-10-20T03:10:00+08:00"
+      },
+      "cause_conclusion": "door_open",
+      "evidence": [
+        {
+          "feature": "device_event:door_open",
+          "value": 2,
+          "threshold": 1,
+          "note": "窗口内上报 开门 事件的采样条数"
+        },
+        {
+          "feature": "peak_temperature_c",
+          "value": 12.4,
+          "threshold": 8,
+          "note": "窗口内峰值温度"
+        }
+      ],
+      "disposition": "isolate",
+      "disposition_note": "本次越温涉及 4 个在库批次，其中 4 个越出各自制品温区，建议先隔离并送疫苗生产企业评估质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认，系统不给出放行结论。",
+      "advice": {
+        "disposition": "isolate",
+        "note": "本次越温涉及 4 个在库批次，其中 4 个越出各自制品温区，建议先隔离并送疫苗生产企业评估质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认，系统不给出放行结论。",
+        "rationale": "越温窗口 2026-10-20 03:10（+08:00） ~ 2026-10-20 03:25（+08:00），峰值 12.4 ℃，持续 15 分钟；原因结论：开门（door_open）；归因证据 2 条",
+        "batch_advices": [
+          {
+            "batch_ref": "\u003cEXAMPLE_LOT-01\u003e",
+            "product_name": "疫苗（脱敏样例）",
+            "quantity": 120,
+            "expiry_date": "\u003cEXAMPLE_EXPIRY-A\u003e",
+            "zone": "2~8℃",
+            "zone_basis": "点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处）",
+            "exposure_minutes": 15,
+            "deviation_c": 4.4,
+            "exposed": true,
+            "affected": true,
+            "disposition": "isolate",
+            "advice_text": "建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-01\u003e，制品 疫苗（脱敏样例），数量 120），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定",
+            "rationale": "本次越温峰值 12.4 ℃ 越出该批次温区 2~8℃（超出 4.4 ℃），该批次在窗口内暴露 15 分钟；原因结论：开门（door_open）",
+            "evidence": [
+              {
+                "feature": "device_event:door_open",
+                "value": 2,
+                "threshold": 1,
+                "note": "窗口内上报 开门 事件的采样条数"
+              },
+              {
+                "feature": "peak_temperature_c",
+                "value": 12.4,
+                "threshold": 8,
+                "note": "窗口内峰值温度"
+              },
+              {
+                "feature": "peak_deviation_from_batch_zone_c",
+                "value": 4.4,
+                "threshold": 0,
+                "note": "峰值相对该批次温区 2~8℃ 的偏离（℃）"
+              },
+              {
+                "feature": "excursion_exposure_minutes",
+                "value": 15,
+                "threshold": 0,
+                "note": "该批次在本次越温窗口内的暴露时长（分钟）"
+              }
+            ]
+          },
+          {
+            "batch_ref": "\u003cEXAMPLE_LOT-02\u003e",
+            "product_name": "疫苗（脱敏样例）",
+            "quantity": 60,
+            "expiry_date": "\u003cEXAMPLE_EXPIRY-B\u003e",
+            "zone": "2~8℃",
+            "zone_basis": "点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处）",
+            "exposure_minutes": 15,
+            "deviation_c": 4.4,
+            "exposed": true,
+            "affected": true,
+            "disposition": "isolate",
+            "advice_text": "建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-02\u003e，制品 疫苗（脱敏样例），数量 60），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定",
+            "rationale": "本次越温峰值 12.4 ℃ 越出该批次温区 2~8℃（超出 4.4 ℃），该批次在窗口内暴露 15 分钟；原因结论：开门（door_open）",
+            "evidence": [
+              {
+                "feature": "device_event:door_open",
+                "value": 2,
+                "threshold": 1,
+                "note": "窗口内上报 开门 事件的采样条数"
+              },
+              {
+                "feature": "peak_temperature_c",
+                "value": 12.4,
+                "threshold": 8,
+                "note": "窗口内峰值温度"
+              },
+              {
+                "feature": "peak_deviation_from_batch_zone_c",
+                "value": 4.4,
+                "threshold": 0,
+                "note": "峰值相对该批次温区 2~8℃ 的偏离（℃）"
+              },
+              {
+                "feature": "excursion_exposure_minutes",
+                "value": 15,
+                "threshold": 0,
+                "note": "该批次在本次越温窗口内的暴露时长（分钟）"
+              }
+            ]
+          },
+          {
+            "batch_ref": "\u003cEXAMPLE_LOT-03\u003e",
+            "product_name": "疫苗（脱敏样例）",
+            "quantity": 48,
+            "expiry_date": "\u003cEXAMPLE_EXPIRY-C\u003e",
+            "zone": "2~8℃",
+            "zone_basis": "点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处）",
+            "exposure_minutes": 15,
+            "deviation_c": 4.4,
+            "exposed": true,
+            "affected": true,
+            "disposition": "isolate",
+            "advice_text": "建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-03\u003e，制品 疫苗（脱敏样例），数量 48），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定",
+            "rationale": "本次越温峰值 12.4 ℃ 越出该批次温区 2~8℃（超出 4.4 ℃），该批次在窗口内暴露 15 分钟；原因结论：开门（door_open）",
+            "evidence": [
+              {
+                "feature": "device_event:door_open",
+                "value": 2,
+                "threshold": 1,
+                "note": "窗口内上报 开门 事件的采样条数"
+              },
+              {
+                "feature": "peak_temperature_c",
+                "value": 12.4,
+                "threshold": 8,
+                "note": "窗口内峰值温度"
+              },
+              {
+                "feature": "peak_deviation_from_batch_zone_c",
+                "value": 4.4,
+                "threshold": 0,
+                "note": "峰值相对该批次温区 2~8℃ 的偏离（℃）"
+              },
+              {
+                "feature": "excursion_exposure_minutes",
+                "value": 15,
+                "threshold": 0,
+                "note": "该批次在本次越温窗口内的暴露时长（分钟）"
+              }
+            ]
+          },
+          {
+            "batch_ref": "\u003cEXAMPLE_LOT-04\u003e",
+            "product_name": "疫苗（脱敏样例）",
+            "quantity": 96,
+            "expiry_date": "\u003cEXAMPLE_EXPIRY-D\u003e",
+            "zone": "2~8℃",
+            "zone_basis": "点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处）",
+            "exposure_minutes": 15,
+            "deviation_c": 4.4,
+            "exposed": true,
+            "affected": true,
+            "disposition": "isolate",
+            "advice_text": "建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-04\u003e，制品 疫苗（脱敏样例），数量 96），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定",
+            "rationale": "本次越温峰值 12.4 ℃ 越出该批次温区 2~8℃（超出 4.4 ℃），该批次在窗口内暴露 15 分钟；原因结论：开门（door_open）",
+            "evidence": [
+              {
+                "feature": "device_event:door_open",
+                "value": 2,
+                "threshold": 1,
+                "note": "窗口内上报 开门 事件的采样条数"
+              },
+              {
+                "feature": "peak_temperature_c",
+                "value": 12.4,
+                "threshold": 8,
+                "note": "窗口内峰值温度"
+              },
+              {
+                "feature": "peak_deviation_from_batch_zone_c",
+                "value": 4.4,
+                "threshold": 0,
+                "note": "峰值相对该批次温区 2~8℃ 的偏离（℃）"
+              },
+              {
+                "feature": "excursion_exposure_minutes",
+                "value": 15,
+                "threshold": 0,
+                "note": "该批次在本次越温窗口内的暴露时长（分钟）"
+              }
+            ]
+          }
+        ]
+      },
+      "needs_review": true,
+      "missing_fields": [
+        "disposition"
+      ],
+      "quality": {
+        "complete": false,
+        "qualified": true,
+        "missing_fields": [
+          "disposition"
+        ],
+        "pending_fields": [
+          "disposition"
+        ],
+        "checked_at": "2026-10-26T15:49:00.204413+08:00"
+      },
+      "draft_text": "疫苗储存和运输温度异常情况记录表（草稿）\n==============================================\n    待补要素：本表要素未齐备，待补：处置建议（须经药学部主管复核补齐；这几项补齐前不影响本表记入冷链台账）\n用途声明：本表由冷链温控判定系统自动生成，属草稿；须经药学部主管复核并提交疫苗生产企业评估质量影响后，再由药学部主管确认处置。本表不构成批次放行结论。\n\n一、监测点位与设备\n    点位编号：point-vax-freezer-01\n    设备名称：疫苗冷藏库温度记录仪\n    记录仪标识：device-recorder-0001\n\n二、温度异常情况\n    越限起始时间：2026-10-20 03:10（+08:00）\n    越限结束时间：2026-10-20 03:25（+08:00）\n    越限持续时长：15 分钟\n    峰值温度：12.4 ℃\n    峰值出现时刻：2026-10-20 03:15（+08:00）\n    所属温区：2~8℃\n    温区来源：点位温区配置（依据：点位温区配置 point_id=point-vax-freezer-01 的 zone_min_c/zone_max_c）\n\n三、原因结论与判定依据\n    原因结论：开门（door_open）\n    判定置信度：0.86\n    证据摘要：\n      1) device_event:door_open = 2（阈值 1）—— 窗口内上报 开门 事件的采样条数\n      2) peak_temperature_c = 12.4（阈值 8）—— 窗口内峰值温度\n\n四、涉及批次\n    涉及批次 1：批次号 \u003cEXAMPLE_LOT-01\u003e｜品名 疫苗（脱敏样例）｜数量 120｜有效期 \u003cEXAMPLE_EXPIRY-A\u003e\n      该批次温区：2~8℃（依据：点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处））\n      暴露时长：15 分钟；峰值相对该批次温区偏离 4.4 ℃（已越出该批次温区）\n      批次可用性建议：隔离（isolate）——建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-01\u003e，制品 疫苗（脱敏样例），数量 120），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定\n    涉及批次 2：批次号 \u003cEXAMPLE_LOT-02\u003e｜品名 疫苗（脱敏样例）｜数量 60｜有效期 \u003cEXAMPLE_EXPIRY-B\u003e\n      该批次温区：2~8℃（依据：点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处））\n      暴露时长：15 分钟；峰值相对该批次温区偏离 4.4 ℃（已越出该批次温区）\n      批次可用性建议：隔离（isolate）——建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-02\u003e，制品 疫苗（脱敏样例），数量 60），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定\n    涉及批次 3：批次号 \u003cEXAMPLE_LOT-03\u003e｜品名 疫苗（脱敏样例）｜数量 48｜有效期 \u003cEXAMPLE_EXPIRY-C\u003e\n      该批次温区：2~8℃（依据：点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处））\n      暴露时长：15 分钟；峰值相对该批次温区偏离 4.4 ℃（已越出该批次温区）\n      批次可用性建议：隔离（isolate）——建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-03\u003e，制品 疫苗（脱敏样例），数量 48），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定\n    涉及批次 4：批次号 \u003cEXAMPLE_LOT-04\u003e｜品名 疫苗（脱敏样例）｜数量 96｜有效期 \u003cEXAMPLE_EXPIRY-D\u003e\n      该批次温区：2~8℃（依据：点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处））\n      暴露时长：15 分钟；峰值相对该批次温区偏离 4.4 ℃（已越出该批次温区）\n      批次可用性建议：隔离（isolate）——建议先隔离该批次（批次号 \u003cEXAMPLE_LOT-04\u003e，制品 疫苗（脱敏样例），数量 96），并送疫苗生产企业评估本次温度偏离的质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认决定\n\n五、处置建议\n    处置建议：隔离（isolate）（最终处置待药学部主管确认后确定）\n    处置说明：本次越温涉及 4 个在库批次，其中 4 个越出各自制品温区，建议先隔离并送疫苗生产企业评估质量影响；批次是否可用由疫苗生产企业评估质量影响后、再由药学部主管确认，系统不给出放行结论。\n\n六、数据来源与生成时间\n    数据来源：记录仪上报\n    采样条数：7 条\n    取数区间：2026-10-20 03:00（+08:00） ~ 2026-10-20 03:30（+08:00）\n    采样周期口径：300 秒（来源：点位温区配置的标称值）\n    生成时间：2026-10-26 15:49（+08:00）\n    生成方式：系统自动成稿（草稿，未经人工复核）\n\n七、人工复核（须由药学部主管填写）\n    复核人（药学部主管）：____________________\n    复核日期：____________________\n    复核结论（同意 / 退回补充 / 另附说明）：____________________\n    送疫苗生产企业评估（企业名称 / 受理日期）：____________________\n\n    本表为系统生成的草稿，须经药学部主管复核并提交疫苗生产企业评估。",
+      "generated_at": "2026-10-26T15:49:00.203776+08:00"
+    },
+    "series": {
+      "point_id": "point-vax-freezer-01",
+      "from": "2026-10-20T03:00:00+08:00",
+      "to": "2026-10-20T03:30:00+08:00",
+      "sample_count": 7,
+      "samples": [
+        {
+          "point_id": "point-vax-freezer-01",
+          "device_id": "device-recorder-0001",
+          "device_name": "疫苗冷藏库温度记录仪",
+          "measured_at": "2026-10-20T03:00:00+08:00",
+          "measured_at_raw": "2026-10-20T03:00:00+08:00",
+          "temperature_c": 5.2,
+          "unit": "C",
+          "temperature_raw": 5.2,
+          "unit_raw": "C",
+          "humidity_pct": 58,
+          "battery_pct": 92,
+          "accuracy_c": 0.3,
+          "source": "recorder",
+          "precision": {
+            "limited": false,
+            "limit_c": 0.5,
+            "declared_c": 0.3
+          },
+          "data_notes": {
+            "encoding_fallback": false,
+            "truncated": false
+          }
+        },
+        {
+          "point_id": "point-vax-freezer-01",
+          "device_id": "device-recorder-0001",
+          "device_name": "疫苗冷藏库温度记录仪",
+          "measured_at": "2026-10-20T03:05:00+08:00",
+          "measured_at_raw": "2026-10-20T03:05:00+08:00",
+          "temperature_c": 5.6,
+          "unit": "C",
+          "temperature_raw": 5.6,
+          "unit_raw": "C",
+          "humidity_pct": 59.5,
+          "battery_pct": 92,
+          "accuracy_c": 0.3,
+          "source": "recorder",
+          "precision": {
+            "limited": false,
+            "limit_c": 0.5,
+            "declared_c": 0.3
+          },
+          "data_notes": {
+            "encoding_fallback": false,
+            "truncated": false
+          }
+        },
+        {
+          "point_id": "point-vax-freezer-01",
+          "device_id": "device-recorder-0001",
+          "device_name": "疫苗冷藏库温度记录仪",
+          "measured_at": "2026-10-20T03:10:00+08:00",
+          "measured_at_raw": "2026-10-20T03:10:00+08:00",
+          "temperature_c": 8.6,
+          "unit": "C",
+          "temperature_raw": 8.6,
+          "unit_raw": "C",
+          "humidity_pct": 61,
+          "battery_pct": 91,
+          "accuracy_c": 0.3,
+          "source": "recorder",
+          "events": [
+            "door_open"
+          ],
+          "precision": {
+            "limited": false,
+            "limit_c": 0.5,
+            "declared_c": 0.3
+          },
+          "data_notes": {
+            "encoding_fallback": false,
+            "truncated": false
+          }
+        },
+        {
+          "point_id": "point-vax-freezer-01",
+          "device_id": "device-recorder-0001",
+          "device_name": "疫苗冷藏库温度记录仪",
+          "measured_at": "2026-10-20T03:15:00+08:00",
+          "measured_at_raw": "2026-10-20T03:15:00+08:00",
+          "temperature_c": 12.4,
+          "unit": "C",
+          "temperature_raw": 12.4,
+          "unit_raw": "C",
+          "humidity_pct": 68.5,
+          "battery_pct": 91,
+          "accuracy_c": 0.3,
+          "source": "recorder",
+          "alarm_flag": true,
+          "events": [
+            "door_open"
+          ],
+          "precision": {
+            "limited": false,
+            "limit_c": 0.5,
+            "declared_c": 0.3
+          },
+          "data_notes": {
+            "encoding_fallback": false,
+            "truncated": false
+          }
+        },
+        {
+          "point_id": "point-vax-freezer-01",
+          "device_id": "device-recorder-0001",
+          "device_name": "疫苗冷藏库温度记录仪",
+          "measured_at": "2026-10-20T03:20:00+08:00",
+          "measured_at_raw": "2026-10-20T03:20:00+08:00",
+          "temperature_c": 9.8,
+          "unit": "C",
+          "temperature_raw": 9.8,
+          "unit_raw": "C",
+          "humidity_pct": 66,
+          "battery_pct": 91,
+          "accuracy_c": 0.3,
+          "source": "recorder",
+          "alarm_flag": true,
+          "precision": {
+            "limited": false,
+            "limit_c": 0.5,
+            "declared_c": 0.3
+          },
+          "data_notes": {
+            "encoding_fallback": false,
+            "truncated": false
+          }
+        },
+        {
+          "point_id": "point-vax-freezer-01",
+          "device_id": "device-recorder-0001",
+          "device_name": "疫苗冷藏库温度记录仪",
+          "measured_at": "2026-10-20T03:25:00+08:00",
+          "measured_at_raw": "2026-10-20T03:25:00+08:00",
+          "temperature_c": 8.7,
+          "unit": "C",
+          "temperature_raw": 8.7,
+          "unit_raw": "C",
+          "humidity_pct": 63.5,
+          "battery_pct": 90,
+          "accuracy_c": 0.3,
+          "source": "recorder",
+          "precision": {
+            "limited": false,
+            "limit_c": 0.5,
+            "declared_c": 0.3
+          },
+          "data_notes": {
+            "encoding_fallback": false,
+            "truncated": false
+          }
+        },
+        {
+          "point_id": "point-vax-freezer-01",
+          "device_id": "device-recorder-0001",
+          "device_name": "疫苗冷藏库温度记录仪",
+          "measured_at": "2026-10-20T03:30:00+08:00",
+          "measured_at_raw": "2026-10-20T03:30:00+08:00",
+          "temperature_c": 6.1,
+          "unit": "C",
+          "temperature_raw": 6.1,
+          "unit_raw": "C",
+          "humidity_pct": 61,
+          "battery_pct": 90,
+          "accuracy_c": 0.3,
+          "source": "recorder",
+          "precision": {
+            "limited": false,
+            "limit_c": 0.5,
+            "declared_c": 0.3
+          },
+          "data_notes": {
+            "encoding_fallback": false,
+            "truncated": false
+          }
+        }
+      ]
+    },
+    "window": {
+      "window": {
+        "start": "2026-10-20T03:10:00+08:00",
+        "end": "2026-10-20T03:25:00+08:00",
+        "duration_minutes": 15,
+        "peak_c": 12.4,
+        "peak_at": "2026-10-20T03:15:00+08:00",
+        "zone": "2~8℃",
+        "sample_count": 4,
+        "hysteresis_c": 1,
+        "merge_count": 0,
+        "out_of_range_samples": 4,
+        "min_excursion_minutes": 10,
+        "sampling_interval_sec": 300,
+        "interval_source": "point_profile",
+        "inferred_interval_sec": 300,
+        "rise_rate": {
+          "per_minute": 0.48000000000000004,
+          "minutes_to_peak": 15,
+          "peak_c": 12.4,
+          "valid_samples": 7,
+          "excluded_stuck_samples": 0,
+          "excluded_gap_minutes": 0,
+          "usable": true,
+          "note": "温升速率按连续观测段起点到峰值的平均速率折算；探头卡死段与数据缺口均已剔除"
+        },
+        "segments": [
+          {
+            "start": "2026-10-20T03:10:00+08:00",
+            "end": "2026-10-20T03:25:00+08:00",
+            "duration_minutes": 15,
+            "peak_c": 12.4,
+            "peak_at": "2026-10-20T03:15:00+08:00",
+            "sample_count": 4,
+            "out_of_range_samples": 4
+          }
+        ],
+        "segment_count": 1
+      },
+      "zone_min_c": 2,
+      "zone_max_c": 8,
+      "zone_source": "point_profile",
+      "zone_basis": "点位温区配置 point_id=point-vax-freezer-01 的 zone_min_c/zone_max_c",
+      "products": [
+        {
+          "product_name": "疫苗（脱敏样例）",
+          "zone_min_c": 2,
+          "zone_max_c": 8,
+          "zone_label": "2~8℃",
+          "zone_source": "product_manual",
+          "zone_basis": "点位温区配置 products[] 中制品 疫苗（脱敏样例） 的条目（未注明出处）",
+          "out_of_range": false
+        }
+      ],
+      "precision": {
+        "limited": false,
+        "limit_c": 0.5,
+        "limit_source": "point_profile",
+        "declared_c": 0.3
+      },
+      "binding": {
+        "status": "point_only",
+        "point_id": "point-vax-freezer-01",
+        "device_id": "device-recorder-0001",
+        "reason": "点位 point-vax-freezer-01 未登记设备清单，读数设备 \"device-recorder-0001\" 的归属未核验"
+      }
+    }
+  }
+}

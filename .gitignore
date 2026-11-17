@@ -1,0 +1,54 @@
+# 环境变量与本地凭据（禁止入库）
+.env
+.env.local
+*.pem
+*.key
+
+# 依赖与构建产物
+venv/
+.venv/
+node_modules/
+target/
+dist/
+build/
+bin/
+coverage/
+# 落在仓库根的二进制与测试产物
+/coldchain
+*.test
+*.out
+
+# 运行时数据与日志（发布前必须清空）
+data/
+logs/
+*.log
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+# 冷数据归档目录（默认落在 data/archive，单独排除以防改路径时漏掉）
+archive/
+
+# Go / Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.tmp
+*.temp
+
+# 编排元数据（不属于项目产物）
+score.json
+task.json
+progress.txt
+
+# 编辑器
+.idea/
+.vscode/
+.DS_Store

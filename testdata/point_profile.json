@@ -1,0 +1,16 @@
+{
+  "point_id": "point-vax-freezer-01",
+  "zone_min_c": 2,
+  "zone_max_c": 8,
+  "sample_interval_sec": 300,
+  "min_excursion_minutes": 10,
+  "hysteresis_c": 1,
+  "accuracy_limit_c": 0.5,
+  "products": [
+    {
+      "product_name": "疫苗（脱敏样例）",
+      "zone_min_c": 2,
+      "zone_max_c": 8
+    }
+  ]
+}
